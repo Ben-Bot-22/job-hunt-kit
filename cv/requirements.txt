@@ -1,0 +1,12 @@
+# CV tooling deps (kept separate from the root and other leaves — clean seam, same as triage/research).
+#
+# `python-docx` is the whole addition: render_cv.py edits the base .docx in place (preserving fonts,
+# numbering and live links) and make_cover_letter.py lays out the letter. It was the one dependency the
+# tool used but no requirements file declared — so a fresh clone that ran `/tailor-cv` hit ImportError.
+# `core/requirements.txt` is pulled in for the shared `core.` imports the scripts make.
+#
+# Two NON-Python tools the scripts shell out to are NOT pip-installable and are documented in cv/README.md:
+#   - LibreOffice (`soffice`) — docx -> PDF, only when you pass --pdf
+#   - poppler (`pdftoppm` / `pdfinfo`) — page-count and preview
+-r ../core/requirements.txt
+python-docx>=1.1

@@ -1,0 +1,11 @@
+{
+  "_comment": "Robin Doe's standing cover letter — the content half of cv/scripts/make_cover_letter.py. The name/title/contact header comes from profile.yaml -> identity, not from here, because it is the same on every letter. Replace every paragraph below with your own; copy this file into applications/<folder>/ and edit it when a role deserves a tailored letter.",
+  "date": "January 5, 2026",
+  "salutation": "Dear Hiring Manager,",
+  "body": [
+    "I build and run web applications end to end — the React front end, the API behind it, and the deployment and monitoring that keep it up. Most of what I have shipped, I have also been the one paged about at 2am, which is where most of what I know about writing maintainable code came from.",
+    "Your posting asks for someone comfortable owning a feature from design through production. That is the work I like most, and the reason I am writing rather than waiting for a recruiter to forward this to me.",
+    "I would welcome the chance to talk about what the first ninety days would look like."
+  ],
+  "closing": "Thank you for your time and consideration."
+}

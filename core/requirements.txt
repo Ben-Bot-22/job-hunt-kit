@@ -1,0 +1,26 @@
+# Core deps — the shared layer, so every leaf inherits these.
+#   - models.py: pydantic schemas + the Job carrier.
+#   - fetch.py:  httpx + JSON-LD parsing + a reader-API fallback (no heavy scraper stack).
+#   - index.py:  langchain-core for the `Document` type and the numpy-backed InMemoryVectorStore,
+#                fastembed for the embedder. fastembed serves the same bge-small-en-v1.5 weights as
+#                sentence-transformers via ONNX, with no torch: ~30 MB of wheels and 64 MB of
+#                weights, against 1.0 GB — and on Linux torch declares the whole CUDA stack, which a
+#                CPU-only tool would download and never execute. Document building stays pure, so
+#                the model is fetched on first embed and never at import.
+httpx>=0.28
+beautifulsoup4>=4.12
+lxml>=5.0
+pydantic>=2.0
+langchain-core>=1.5
+fastembed>=0.8
+# The generation half of the core (stage 3). Cheap here — `anthropic` and `langchain-core` were
+# already in the tree, so this is +1 package / 0.5 MB. It does impose `anthropic<1.0.0`, a ceiling
+# the project didn't choose; recorded rather than glossed. Pinned to a floor because the
+# `method="json_schema"` structured-output path that keeps scoring identical arrived in 1.x —
+# see docs/research/structured-output-spike.md and core/test_structured_output.py.
+langchain-anthropic>=1.5
+# core/llm.py reads config/settings.yaml (the provider) and the repo-root .env (that provider's key),
+# so the shared layer now needs both loaders itself rather than borrowing triage's. Both were already
+# installed via triage/ and research/; this only makes the dependency honest.
+PyYAML>=6.0
+python-dotenv>=1.0

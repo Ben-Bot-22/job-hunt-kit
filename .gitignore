@@ -1,0 +1,35 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+.secrets/
+*.json.key
+gcp-sa.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local data / scratch
+*.sqlite
+*.db
+scratch/
+.state/
+
+# Generated bulk — the tool's working memory, its output, and per-application artifacts.
+# This is NOT the open-source extraction rule (that is a separate allowlist); profile/ holds the
+# hand-tuned inputs and stays TRACKED, because losing a rubric edit is unrecoverable.
+data/
+matches/
+applications/

@@ -1,0 +1,9 @@
+# Triage tool deps (kept separate from jobs-db's root requirements — clean seam).
+# Deliberately minimal for out-of-the-box reliability on Python 3.14:
+#   - the JD fetch chain and the Job model now live in core/ — install core/requirements.txt too.
+#   - LinkedIn guest endpoint is hand-fetched (jobspy/pandas deferred; see triage-plan §12).
+-r ../core/requirements.txt
+anthropic>=0.111
+python-dateutil>=2.9
+PyYAML>=6.0
+python-dotenv>=1.0

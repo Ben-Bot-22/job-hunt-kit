@@ -1,0 +1,122 @@
+# config/example/settings.yaml — HOW THE TOOL RUNS FOR THE EXAMPLE SEEKER.
+#
+# A complete, valid operational config, tuned for a first run rather than for a tuned instance: the two
+# channels that need no key are on, the two that need something a stranger does not have are off, and
+# the concurrency is low enough not to earn a rate-limit on someone's first afternoon.
+#
+# Point the whole tool at this directory — settings AND identity — with one environment variable:
+#
+#     JOBSDB_CONFIG_HOME=config/example .venv/bin/python -m triage --paste <a job URL>
+#
+# Validated on load by core/settings.py, exactly like the real file. The machine-readable form of every
+# key below is ../settings.schema.json.
+# yaml-language-server: $schema=../settings.schema.json
+
+llm:
+  # The one value that makes the tool yours. `anthropic` is the tested provider; openai, google and
+  # ollama are registered and untested — see README → "Which LLM providers work". Whichever you pick,
+  # its key goes in `.env` at the repo root and nowhere else.
+  provider: anthropic
+
+models:
+  analyze: claude-opus-4-8     # JUDGMENT: fit + ranking per JD. The expensive one, and the one that matters.
+  extract: claude-sonnet-5     # MECHANICAL: pull jobs out of an email or a pasted page.
+  prefilter: claude-sonnet-5   # CHEAP SCREEN: is this worth an analyze call at all?
+
+# A week rather than three days: a first run wants enough board postings to be worth reading, and there
+# is no inbox backlog here to keep small.
+window_days: 7
+
+prefilter:
+  enabled: true
+  screen: true
+
+# Retrieval-augmented scoring. On a fresh clone the corpus is empty, so this does nothing at all until
+# the first run has been scored — and from the second run on, the tool is calibrating against its own
+# past judgments. Leaving it on is how that starts.
+precedent:
+  enabled: true
+  k: 3
+
+dedup:
+  enabled: true
+  similarity: 0.95
+  overlap: 0.80
+  min_jd_chars: 500
+
+# Deliberately low. This is the dominant runtime lever, and the failure it prevents — a stranger's first
+# run earning 429s from a provider they just signed up to — is worse than the run being slower.
+max_workers: 5
+
+liveness:
+  enabled: true
+  max_check: 20
+  workers: 8
+
+channels:
+  # OFF: macOS only, and it reads a Gmail account through Apple Mail, which means configuring Apple Mail
+  # before you have seen the tool do anything. Turn it on once you have (and fill in `inbox:` in
+  # profile.yaml).
+  mail:
+    enabled: false
+
+  # ON, with seven real public boards named so a first run finds real jobs even with nothing to paste
+  # and even in a slow week. Keyless GETs, any OS. The token is the slug in the board URL:
+  # job-boards.greenhouse.io/<token>, jobs.lever.co/<token>.
+  #
+  # The set leans high-volume tech / full-stack on purpose — a single small board (anthropic alone is
+  # ~18 postings/week) risks a nearly empty run on a quiet week, which reads as "the tool is broken".
+  # Live-verified counts on 2026-07-22 (see .claude/skills/setup/starter-boards.md), 7-day window:
+  #   stripe 42 · databricks 36 · mongodb 45 · gitlab 27 · cloudflare 18 · anthropic 18 · gopuff 16
+  #   ≈ 202 postings/week. gitlab is all-remote by construction; gopuff is the largest live Lever board
+  #   (it replaces `leverdemo`, whose postings are old and report 0 in a 7-day window — it looked broken).
+  #
+  # COST: those ~202 all hit the cheap Sonnet prefilter; only survivors become Opus `analyze` calls, so
+  # the real spend is far below 202 — but a busy week is a real bill on a key you signed up for this
+  # morning. `max_workers` below throttles the RATE (no 429s), not the count. Trim this list in
+  # starter-boards.md if you want a smaller first run; REPLACE it with companies you actually want.
+  boards:
+    enabled: true
+    greenhouse:
+      - stripe
+      - databricks
+      - mongodb
+      - gitlab
+      - cloudflare
+      - anthropic
+    lever:
+      - gopuff
+
+  # OFF *here specifically*, and this is the one place it differs from the real config/settings.yaml,
+  # which ships it ON. This is the keyless demo (and the test fixture): a first try-it run should be
+  # seconds, and agencies is the only source of CONTRACT work but also a scrape of six live sites — a
+  # minute or two of wall-clock, failing by returning zero rather than raising. So the demo keeps it
+  # off for speed; a real configured run gets it on. Turn it on here too once you want contract reqs.
+  agencies:
+    enabled: false
+    sources: []         # [] = the four measured healthy: insightglobal, teksystems, motion, mondo
+
+  # ON, and it needs nothing: `--paste <url>` or `--paste-file links.txt`, any OS, no key, no OAuth, no
+  # mail client. With no URLs it costs nothing and reports `paste 0`.
+  paste:
+    enabled: true
+
+  # OFF, and it must stay off: this is a documented stub that raises when called, not a channel. An
+  # unconfigured channel defaults to ON, so leaving this block out would print `gmail CRASHED` in every
+  # run summary. See triage/channels/gmail_api.py.
+  gmail:
+    enabled: false
+
+# The MARKET REPORT — `python -m research.market`, a separate monthly command. Nothing here touches
+# the daily run. Robin is in Chicago, so the wage baseline is anchored on the nation AND on Chicago:
+# the national/metro gap is real (6.3% on the mean between national and Dallas-Fort Worth in 2026),
+# and a national-only figure hides it. `N` + seven zeroes is the nation, `M` + a CBSA code is a metro.
+# `supply: false` keeps the run in seconds — the job feeds are minutes and buy only per-source counts.
+report:
+  external: true
+  supply: false
+  bls_areas:
+    National: N0000000
+    Chicago-Naperville-Elgin, IL-IN-WI: M0016980
+  top_terms: 20
+  top_employers: 15

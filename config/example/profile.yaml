@@ -1,0 +1,46 @@
+# config/example/profile.yaml — WHO THE EXAMPLE SEEKER IS.
+#
+# Robin Doe does not exist. The surname is a placeholder, the address is at `example.invalid` (RFC
+# 2606 reserves that TLD precisely so it can never be registered), and there is no Google Sheet id.
+# See config/example/README.md.
+#
+# This file is the identity half of a configuration. `/setup` copies it to `profile/profile.yaml` and
+# then replaces every value in it with yours.
+
+# WHO ROBIN IS, literally — the name that goes on a rendered CV or cover letter, and the line under
+# it. `robin.doe@example.invalid` is at the RFC 2606 TLD, so it is provably nobody's address.
+identity:
+  name: "Robin Doe"
+  title: "Full-Stack Developer"
+  contact: "robin.doe@example.invalid  |  Chicago, IL"
+
+# The mail account the `mail` channel reads through Apple Mail. Unused here — `mail` is switched off
+# in the example settings, because it is macOS-only and a stranger's first run must not depend on
+# having wired their inbox into Apple Mail first. The block stays so the shape is visible.
+inbox:
+  account: "robin.doe@example.invalid"
+  mailbox: "INBOX"
+
+# Gmail label that processed job emails are moved into after a run. Empty = archiving off, which is
+# the right default for anyone not running the `mail` channel.
+archive_mailbox: ""
+
+# The applied-jobs Google Sheet id, read in-session by `/sync-applied`. Empty means Robin has not
+# connected one; the dedup cache then holds only what the tool has seen itself.
+applied_sheet: ""
+
+# Agencies Robin rates, matched case-insensitively against company/source and tiered PRIMARY. These
+# are invented names — replace them with the recruiters who have actually placed you, and prune the
+# ones that never do. An empty list is fine: everything then tiers by the rules in triage/rank.py.
+primary_agencies:
+  - northwind staffing
+  - harborview talent
+  - lakeshore technical recruiting
+
+# Contract platforms -> SECONDARY tier. These are real marketplaces rather than invented ones,
+# because which platforms exist is a fact about the world rather than anything personal.
+secondary_platforms:
+  - braintrust
+  - gun.io
+  - gunio
+  - upwork

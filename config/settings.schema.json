@@ -1,0 +1,652 @@
+{
+  "$defs": {
+    "AgenciesChannelSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Omitted means ON — see triage/config.py.",
+          "title": "Enabled"
+        },
+        "sources": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which agency scrapers to read, from core/scrapers/AGENCIES: insightglobal, teksystems, motion, mondo, apex, kore1. Omitted or empty means the four measured healthy on 2026-07-22 (triage/channels/agencies.py:DEFAULT_SOURCES) — apex and kore1 are out because they return single digits with no error, which is this family's silent-zero failure. An unknown name is warned about, not fatal, because a scraper can be retired between releases.",
+          "title": "Sources"
+        }
+      },
+      "title": "AgenciesChannelSettings",
+      "type": "object"
+    },
+    "BoardsChannelSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Omitted means ON — see triage/config.py.",
+          "title": "Enabled"
+        },
+        "greenhouse": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Greenhouse board tokens — the slug in job-boards.greenhouse.io/<token>.",
+          "title": "Greenhouse"
+        },
+        "lever": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Lever board tokens — the slug in jobs.lever.co/<token>.",
+          "title": "Lever"
+        }
+      },
+      "title": "BoardsChannelSettings",
+      "type": "object"
+    },
+    "ChannelSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Omitted means ON — see triage/config.py.",
+          "title": "Enabled"
+        }
+      },
+      "title": "ChannelSettings",
+      "type": "object"
+    },
+    "ChannelsSettings": {
+      "additionalProperties": false,
+      "description": "The five registered job-input channels, named.\n\nNaming them here means a misspelled `mial:` fails rather than switching nothing, which is the same\nsilent failure as a misspelled scalar key. The cost is that registering a fifth channel is an edit\nin two places — `triage/channels.ALL` and here — and `triage/test_channels.py` asserts the two\nagree, so the drift fails a test in the package that owns the registry rather than passing review.",
+      "properties": {
+        "mail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "boards": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoardsChannelSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "agencies": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgenciesChannelSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "paste": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "gmail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ChannelsSettings",
+      "type": "object"
+    },
+    "DedupSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "similarity": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cosine floor. A cosine is bounded; anything outside 0–1 is a typo that would collapse every job or none.",
+          "title": "Similarity"
+        },
+        "overlap": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Word-5-gram Jaccard floor on the JD text — the safety gate.",
+          "title": "Overlap"
+        },
+        "min_jd_chars": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Below this there is too little text to compare.",
+          "title": "Min Jd Chars"
+        }
+      },
+      "title": "DedupSettings",
+      "type": "object"
+    },
+    "LLMSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Vendor every model call goes to: anthropic (tested), openai, google, ollama. Deliberately a free string here — core/llm.py owns the registry and its error already names the providers and their tiers.",
+          "title": "Provider"
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Local / self-hosted / proxy endpoint. Omit for the provider's own.",
+          "title": "Base Url"
+        },
+        "structured_method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How the response schema is bound. Leave unset on Anthropic: `json_schema` is what makes the request byte-identical to the native call it replaced.",
+          "title": "Structured Method"
+        }
+      },
+      "title": "LLMSettings",
+      "type": "object"
+    },
+    "LivenessSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "max_check": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How many ranked jobs get an availability request. 0 = none.",
+          "title": "Max Check"
+        },
+        "workers": {
+          "anyOf": [
+            {
+              "maximum": 64,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parallel network waits. Above ~64 you are DoSing a job board.",
+          "title": "Workers"
+        }
+      },
+      "title": "LivenessSettings",
+      "type": "object"
+    },
+    "ModelSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "analyze": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Judgment: fit + ranking per JD. The expensive one.",
+          "title": "Analyze"
+        },
+        "extract": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mechanical: job links out of an email.",
+          "title": "Extract"
+        },
+        "prefilter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cheap screen: is this worth an analyze call?",
+          "title": "Prefilter"
+        }
+      },
+      "title": "ModelSettings",
+      "type": "object"
+    },
+    "PrecedentSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inject similar past decisions when scoring.",
+          "title": "Enabled"
+        },
+        "k": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How many past decisions are injected. This is the per-job token bill, so the ceiling is low on purpose.",
+          "title": "K"
+        }
+      },
+      "title": "PrecedentSettings",
+      "type": "object"
+    },
+    "PrefilterSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Master switch for both cheap gates.",
+          "title": "Enabled"
+        },
+        "screen": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model gate specifically; the regex rules stay.",
+          "title": "Screen"
+        }
+      },
+      "title": "PrefilterSettings",
+      "type": "object"
+    },
+    "ReportSettings": {
+      "additionalProperties": false,
+      "description": "The market report (`python -m research.market`) — a monthly command, not part of the daily run.",
+      "properties": {
+        "external": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Pull the keyless external baselines (GSA CALC+, BLS OEWS). False makes the run first-party only, with no network at all — the external half then renders as a labelled gap rather than silently shrinking the report.",
+          "title": "External"
+        },
+        "supply": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Also pull the third-party job feeds for per-source counts. Off by default because it is minutes rather than seconds: Adzuna alone fetches a detail page per posting, and Himalayas pages 50 times for ~100 developer rows.",
+          "title": "Supply"
+        },
+        "top_terms": {
+          "anyOf": [
+            {
+              "maximum": 200,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How many clustered ideas each free-text section lists. The report is already ~230 lines at 30; this is the knob that makes it longer or shorter.",
+          "title": "Top Terms"
+        },
+        "top_employers": {
+          "anyOf": [
+            {
+              "maximum": 200,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How many employers the who's-hiring tables list.",
+          "title": "Top Employers"
+        },
+        "bls_areas": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "pattern": "^[NMS][0-9]{7}$",
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "OEWS areas the wage baseline is drawn for, as name -> area code (`N0000000` is the nation, `M0019100` is Dallas-Fort Worth). The default ships national + DFW because this repo's profile is written around remote/DFW; a stranger's metro is an edit here rather than a patch to research/sources/bls.py.",
+          "title": "Bls Areas"
+        }
+      },
+      "title": "ReportSettings",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "How the tool runs. Generated from core/settings.py by `python -m core.settings` — edit the model, not this file. This and profile/ are the agent-editable surface of the repo; everything else is code. The scoring rubric (profile/rubric.md) is prose and has no schema.",
+  "properties": {
+    "llm": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LLMSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "models": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ModelSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "window_days": {
+      "anyOf": [
+        {
+          "maximum": 365,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "How far back to read the inbox / how fresh a posting must be. Days, so 0 would mean no jobs at all.",
+      "title": "Window Days"
+    },
+    "prefilter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PrefilterSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "precedent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PrecedentSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "dedup": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DedupSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "max_workers": {
+      "anyOf": [
+        {
+          "maximum": 64,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Fetch+analyze concurrency. Network-bound, so this is the dominant runtime lever; too high earns 429s.",
+      "title": "Max Workers"
+    },
+    "liveness": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LivenessSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "channels": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ChannelsSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "report": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReportSettings"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "title": "jobs-db settings (config/settings.yaml)",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

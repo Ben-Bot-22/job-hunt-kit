@@ -1,0 +1,59 @@
+# NOTICE — attribution, data terms, and third-party licences
+
+`job-hunt-kit` is MIT-licensed; see `LICENSE`. This file records the obligations that come with the
+*data* it fetches and the *code* it depends on, because neither is covered by that licence.
+
+## Data sources that require attribution
+
+Five of the sources in `research/sources/` publish terms that require naming them wherever their data
+appears. **The obligation is enforced in code rather than documented here and hoped for**: each
+source stamps its attribution line onto every record it emits, `research/sources/__init__.py` drops
+any record that arrives without one, and `attribution_lines()` is what the market report prints. A
+report therefore cannot omit an attribution by forgetting to — it would have to strip the line first.
+
+| source | line it stamps |
+|---|---|
+| Adzuna | `Job data from Adzuna (https://www.adzuna.com)` |
+| Himalayas | `Job data from Himalayas (https://himalayas.app)` |
+| Remotive | `Job data from Remotive (https://remotive.com), linked back to its Remotive listing` |
+| GSA CALC+ | `Source: GSA CALC+ / Contract-Awarded Labor Category (buy.gsa.gov/pricing), US Government public-domain data.` |
+| US BLS OEWS | `Source: US Bureau of Labor Statistics, Occupational Employment and Wage Statistics (OEWS), api.bls.gov — US Government public-domain data.` |
+
+The two government sources are public-domain data and the attribution is a courtesy plus a
+provenance record; the three job boards require it. The six staffing-agency scrapers in
+`core/scrapers/` carry no published attribution requirement and are deliberately absent from that
+list.
+
+Remotive's API terms forbid republishing its rows as listings, so it is registered as **market
+supply only** — it feeds the aggregate report and is never a job channel. Adzuna's salary figures are
+model *predictions* rather than posted pay, and are labelled as such wherever they surface.
+
+## Per-user API keys only
+
+**Every key this tool uses is yours, obtained under your own account and subject to that provider's
+terms.** Nothing here ships a key, proxies a key, or shares one between users; there is no hosted
+service and no second account. `.env.example` lists the variable names and nothing else, and `.env`
+is gitignored. If a source's terms don't permit your use of it, don't set its key — every keyed
+source logs one line and returns nothing when its key is unset, and the keyless path is the default.
+
+## No cached source data is committed
+
+Fetched postings, scored judgments and the retrieval index live under `data/`, which is gitignored
+and is excluded from publication by name. What a clone gets is the code and the fictional-seeker
+example — never a cache of anyone else's listings.
+
+## Third-party code
+
+No copyleft anywhere in the dependency tree. The notable ones:
+
+| dependency | licence |
+|---|---|
+| LangChain (`langchain-core`, `langchain-anthropic`) | MIT |
+| `fastembed` | Apache-2.0 |
+| `bge-small-en-v1.5` (the embedding weights, fetched on first use) | MIT |
+| `httpx`, `beautifulsoup4`, `pydantic`, `PyYAML`, `python-dotenv` | MIT / BSD-style |
+| `lxml` | BSD-3-Clause |
+
+The engineering skills used to *build* this repo are third-party work and are **not redistributed
+here** — see the README's *Which agent runs the workflows*. The five workflows that ship are this
+project's own.

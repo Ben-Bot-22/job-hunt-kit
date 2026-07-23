@@ -1,0 +1,16 @@
+# The whole repo, in one install. There is no root package any more — the Sheets pipeline that owned
+# this file (and `gspread` / `google-auth` with it) was deleted in stage 5 · 01. What is left is the
+# union of the leaves, and every leaf pulls `-r ../core/requirements.txt`, so core arrives once.
+#
+# Install a single tool instead if you only want one: `pip install -r triage/requirements.txt`.
+-r core/requirements.txt
+-r triage/requirements.txt
+-r research/requirements.txt
+-r cv/requirements.txt
+# pytest is here rather than in a `requirements-dev.txt`, and that is deliberate. The conventional
+# split treats the suite as a developer's concern — but the README hands `pytest -q` to a new user as
+# their *install check*: it is the one command that proves the venv, the dependencies and the tool are
+# sound offline and without an API key. That makes pytest user-facing, so it installs with everything
+# else. The cost is ~2 MB somebody may never run; the alternative is a fourth requirements file and a
+# README whose last line fails on a fresh clone, which is exactly the bug this replaced.
+pytest>=8.0

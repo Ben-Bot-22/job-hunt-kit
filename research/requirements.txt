@@ -1,0 +1,16 @@
+# Company-research agent deps (kept separate from the root and triage requirements — clean seam).
+#
+# langgraph is the only addition this package makes, and it is adopted for this feature and no other:
+# the loop has to pivot on what it finds (see research/agent.py). Install cost is near zero — it is
+# already a hard dependency of langchain 1.x, which stage 2 adopts.
+#
+# httpx / beautifulsoup4 / lxml arrive with core/requirements.txt, pulled in below — research/
+# imports core/fetch.py, and nothing from another leaf (see CLAUDE.md → Code layout).
+-r ../core/requirements.txt
+anthropic>=0.111
+langgraph>=1.2
+python-dotenv>=1.0
+# The market-data sources (stage 5) came over from the frozen pipeline on `requests` rather than
+# core's httpx. Left alone deliberately: rewriting nine live scrapers onto a second HTTP client is a
+# behaviour change to code whose whole risk is that it silently stops parsing a real page.
+requests>=2.31
