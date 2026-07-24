@@ -324,14 +324,11 @@ is unset rather than failing the run.
 
 ## Project status
 
-**Built for my own job search and published as a reference implementation.** This repo is a
-point-in-time snapshot of a private working repo, produced by an extraction script that copies an
-allowlist and scans the result. Nothing syncs the two, and a fix made upstream will not appear here.
+**Built for my own job search and published as a reference implementation.** Please customize with
+your own data to get the most out of it. **Fork it and make it yours.**
 
-So: **Fork it and make it yours.** That is the intended relationship, not a fallback. Issues are
-welcome and I read them. Pull requests are the exception rather than the rule, for a mechanical
-reason: anything merged here is overwritten by the next extraction unless it is re-applied upstream
-by hand.
+Issues are welcome and I read them. This repo is a point-in-time snapshot of a private working repo —
+nothing syncs the two — so pull requests are the exception rather than the rule.
 
 ## Licence
 
