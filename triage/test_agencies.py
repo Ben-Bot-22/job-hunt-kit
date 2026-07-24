@@ -237,14 +237,18 @@ def test_an_unknown_source_name_is_skipped_rather_than_crashing_the_channel(capl
 
 # --- the defaults and the registry ----------------------------------------------------------------
 
-def test_the_default_source_list_is_the_four_measured_healthy() -> None:
-    """apex and kore1 returned 3 and 2 postings on 2026-07-22 with no error — the silent-zero failure
-    this family has. They stay registered as market supply and are one config line from coming back;
-    what would bring them back is a double-digit count that survives a spot-check."""
+def test_the_default_source_list_is_every_measured_healthy_source() -> None:
+    """All seven were measured live on 2026-07-24 and all seven return real postings, so the default
+    is now every registered scraper rather than a hand-picked subset.
+
+    apex and kore1 had been held out on the theory that 3 and 2 postings meant small-or-broken boards.
+    Checking by hand found they were TRUNCATING (150 and 6 respectively), as were motion and
+    teksystems — four different bugs presenting as one small plausible number. The exclusion was a bet
+    that a low count meant a small board, and it lost four times out of four; the default list is now
+    the whole registry, and a source leaves it only on evidence rather than on suspicion."""
     from core.scrapers import AGENCIES
-    assert agencies.DEFAULT_SOURCES == ("insightglobal", "teksystems", "motion", "mondo")
-    assert set(agencies.DEFAULT_SOURCES) < set(AGENCIES)
-    assert {"apex", "kore1"} == set(AGENCIES) - set(agencies.DEFAULT_SOURCES)
+    assert set(agencies.DEFAULT_SOURCES) == set(AGENCIES)
+    assert len(agencies.DEFAULT_SOURCES) == len(set(agencies.DEFAULT_SOURCES)), "no duplicates"
 
 
 def test_an_unconfigured_source_list_falls_back_to_the_healthy_four(monkeypatch) -> None:

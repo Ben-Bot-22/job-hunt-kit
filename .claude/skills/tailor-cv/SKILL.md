@@ -52,6 +52,12 @@ Build the changes, each traceable to a bank entry:
   entry; keep Ben-asserted numbers only if already in the base or bank, never invent numbers.
 - Respect **DO-NOT-CLAIM**: Reazy AI = Gemini not Anthropic; CI/CD = jobs-db not Reazy; no undocumented metrics;
   reazy-inference is CPU; nvidia-* architectures aren't Ben's; etc.
+- **If the plan has an `insert_experience` entry for job-hunt-kit, its `subline` MUST carry the repo as a
+  live link** — the project and its URL always travel together (`profile/notes/links.md`). It is a
+  clickable blue `github`, matching the Reazy links, **never a pasted URL in grey text**:
+  `"subline": "2026 – Present  |  [github](https://github.com/Ben-Bot-22/job-hunt-kit)  |  <techs>"`.
+  The renderer turns any `[label](url)` in a sub-line into a real hyperlink styled from the base
+  document's own links. It is never a header link — only on documents that name the project.
 
 ## 4. Present options for approval — BEFORE generating anything
 Show Ben, in chat, a tight preview he can approve or adjust:

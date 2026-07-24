@@ -69,7 +69,7 @@ def test_every_market_source_and_scraper_is_named() -> None:
         assert name in text.replace(" ", "").replace("+", "").replace("-", ""), (
             f"{name} is a live source/scraper and docs/operating/services.md does not name it"
         )
-    assert len(scrapers) == 6, "the rot baseline in services.md §3 is written for six scrapers"
+    assert len(scrapers) == 7, "the rot baseline in services.md §3 is written for seven scrapers"
 
 
 def test_every_registered_provider_is_tiered_on_the_page() -> None:

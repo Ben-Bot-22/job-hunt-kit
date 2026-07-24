@@ -42,7 +42,7 @@ LOCK = ROOT / "skills-lock.json"
 README = ROOT / "README.md"
 
 #: This repo's own workflows — the product, as against the vendored engineering skills.
-OWN = ("setup", "job-triage", "research-company", "sync-applied", "tailor-cv")
+OWN = ("setup", "job-triage", "research-company", "sync-applied", "tailor-cv", "publish")
 
 
 def _frontmatter(skill: Path) -> dict[str, str]:

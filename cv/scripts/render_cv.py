@@ -27,6 +27,14 @@ Plan schema (every key optional — omit to leave that part of the base unchange
       # "title" (optional) overrides that entry's bold header line (e.g. add/drop "(Founder)")
       {"match": "Reazy LLC", "title": "Founder & Full-Stack Developer — Reazy LLC",
        "bullets": ["bullet 1", "bullet 2", ...]}
+    ],
+    "insert_experience": [           # a whole new entry, inserted above the "before" section
+      {"before": "Independent Game Developer",
+       "heading": "JOB-HUNT-KIT — ...  (personal project)",
+       # a sub-line may carry markdown links: [label](url) becomes a REAL clickable hyperlink,
+       # styled from the base document's own links (blue/underlined), not plain text.
+       "subline": "2026 – Present  |  [github](https://github.com/you/repo)  |  Python · LangChain",
+       "bullets": ["bullet 1", ...]}
     ]
   }
 """
@@ -39,8 +47,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import re
+
 from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml.ns import qn
+from docx.oxml.shared import OxmlElement
 from docx.text.paragraph import Paragraph
 
 HEADINGS = ("TECHNICAL SKILLS", "EXPERIENCE", "EDUCATION")
@@ -81,6 +93,76 @@ def _set_single_run_text(p: Paragraph, text: str) -> None:
     runs[0].text = text
     for r in runs[1:]:
         r._r.getparent().remove(r._r)
+
+
+# ----------------------------------------------------------------------------- live links in a sub-line
+
+_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+
+
+def _find_link_rpr(doc):
+    """Run properties of an existing hyperlink in the base — the blue/underlined look to copy.
+
+    We never hard-code a colour: the base document already styles its links (the Reazy sub-line), so a
+    new link inherits exactly that styling and stays consistent if the base is restyled later.
+    """
+    for p in _paras(doc):
+        for h in p._p.findall(qn("w:hyperlink")):
+            for r in h.findall(qn("w:r")):
+                rpr = r.find(qn("w:rPr"))
+                if rpr is not None:
+                    return copy.deepcopy(rpr)
+    return None
+
+
+def _make_run(text: str, rpr) -> "OxmlElement":
+    r = OxmlElement("w:r")
+    if rpr is not None:
+        r.append(copy.deepcopy(rpr))
+    t = OxmlElement("w:t")
+    t.set(qn("xml:space"), "preserve")
+    t.text = text
+    r.append(t)
+    return r
+
+
+def has_links(text: str) -> bool:
+    return bool(_LINK_RE.search(text))
+
+
+def set_text_with_links(p: Paragraph, text: str, doc) -> None:
+    """Write `text` into `p`, turning `[label](url)` spans into real clickable hyperlinks.
+
+    Plain spans keep the paragraph's existing run formatting (the grey sub-line look); link spans get
+    the base document's own hyperlink formatting, so a rendered link is indistinguishable from the ones
+    already in the résumé. Used for entry sub-lines — the only place a plan may carry a link.
+    """
+    base_rpr = None
+    if p.runs:
+        existing = p.runs[0]._r.find(qn("w:rPr"))
+        if existing is not None:
+            base_rpr = copy.deepcopy(existing)
+    link_rpr = _find_link_rpr(doc)
+    if link_rpr is None:
+        link_rpr = base_rpr
+
+    for child in list(p._p):
+        if child.tag in (qn("w:r"), qn("w:hyperlink")):
+            p._p.remove(child)
+
+    pos = 0
+    for m in _LINK_RE.finditer(text):
+        if m.start() > pos:
+            p._p.append(_make_run(text[pos:m.start()], base_rpr))
+        label, url = m.group(1), m.group(2)
+        rel_id = doc.part.relate_to(url, RT.HYPERLINK, is_external=True)
+        link = OxmlElement("w:hyperlink")
+        link.set(qn("r:id"), rel_id)
+        link.append(_make_run(label, link_rpr))
+        p._p.append(link)
+        pos = m.end()
+    if pos < len(text):
+        p._p.append(_make_run(text[pos:], base_rpr))
 
 
 # ----------------------------------------------------------------------------- header (title / tagline)
@@ -270,7 +352,11 @@ def insert_experience(doc, before: str, heading: str, subline: str, bullets: lis
         anchor.addprevious(el)
 
     _set_single_run_text(Paragraph(new_header, parent), heading)
-    _set_single_run_text(Paragraph(new_subline, parent), subline)
+    sub_para = Paragraph(new_subline, parent)
+    if has_links(subline):
+        set_text_with_links(sub_para, subline, doc)
+    else:
+        _set_single_run_text(sub_para, subline)
     for el, text in zip(new_bullets, bullets):
         _set_single_run_text(Paragraph(el, parent), text)
 

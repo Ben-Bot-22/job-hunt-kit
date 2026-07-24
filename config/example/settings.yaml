@@ -89,12 +89,12 @@ channels:
 
   # OFF *here specifically*, and this is the one place it differs from the real config/settings.yaml,
   # which ships it ON. This is the keyless demo (and the test fixture): a first try-it run should be
-  # seconds, and agencies is the only source of CONTRACT work but also a scrape of six live sites — a
-  # minute or two of wall-clock, failing by returning zero rather than raising. So the demo keeps it
-  # off for speed; a real configured run gets it on. Turn it on here too once you want contract reqs.
+  # seconds, and agencies is the only source of CONTRACT work but also a scrape of SEVEN live sites —
+  # roughly five minutes of wall-clock, failing by returning zero rather than raising. So the demo keeps
+  # it off for speed; a real configured run gets it on. Turn it on here too once you want contract reqs.
   agencies:
     enabled: false
-    sources: []         # [] = the four measured healthy: insightglobal, teksystems, motion, mondo
+    sources: []         # [] = all seven: insightglobal, teksystems, motion, mondo, apex, kore1, scion
 
   # ON, and it needs nothing: `--paste <url>` or `--paste-file links.txt`, any OS, no key, no OAuth, no
   # mail client. With no URLs it costs nothing and reports `paste 0`.

@@ -7,9 +7,9 @@ from core.fetch import needs_manual_review
 from core.models import Job
 
 _TIER_TITLES = {
-    "PRIMARY": "PRIMARY — agency contract, remote/DFW (lead here)",
+    "PRIMARY": "PRIMARY — agency contract, remote or onsite (lead here)",
     "SECONDARY": "SECONDARY — contract platforms",
-    "OPPORTUNISTIC": "OPPORTUNISTIC — remote perm / DFW hybrid / AI-native standout",
+    "OPPORTUNISTIC": "OPPORTUNISTIC — perm / AI-native standout / startup",
 }
 
 

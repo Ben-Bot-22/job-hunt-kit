@@ -6,6 +6,71 @@ recurring. Append a dated section per working session. Open bugs live at the bot
 
 ---
 
+## 2026-07-24 — the rot run: four scrapers, four different silent truncations
+
+The run that showed the per-source health line is only a detector if somebody reads it *and disbelieves
+it*. Triage itself was routine — 64 analyzed, 173 skipped pre-eval, 11 emails archived, 4 résumés built,
+first run under the onsite/relocation rubric. The finding was underneath it.
+
+### What shipped
+
+| Fix | What it does |
+|---|---|
+| `core/scrapers/motion.py` | Lifted our own 6-page (120-href) ceiling on a 797-posting board; swapped the two sub-listings for the combined `/tech-jobs`; stop on "no new hrefs". **19 → 275** |
+| `core/scrapers/apex.py` | Off the cookie-gated GET pagination. **3 → 150** |
+| `core/scrapers/teksystems.py` | **Check HTTP status** before treating a sub-sitemap as empty, and de-duplicate discovery. **80 unique, correct** (was 84 records over 80 distinct links) |
+| `core/scrapers/kore1.py` | List regex anchored on posting rows, not category headings. **2 → 6** (board is 64) |
+| `core/scrapers/scion.py` | **New scraper** — the sixth PRIMARY-tier agency. 218 postings walked, **15** after the dev filter |
+| `triage/channels/agencies.py` | `DEFAULT_SOURCES` is now the whole registry (7), not a hand-picked 4 |
+| `docs/operating/{services,tuning}.md` | Counts, constants and the rot baseline re-measured 2026-07-24 |
+
+Agency supply per run: **~155 → ~630.**
+
+### The lesson, and what it cost
+
+**A small plausible number is the hardest failure to see, because it looks like an answer.** The
+2026-07-22 health line read `insightglobal 87 · teksystems 78 · motion 27 · mondo 15 · apex 3 · kore1 2`
+and was interpreted — in this log, in `services.md`, and in the `DEFAULT_SOURCES` comment — as four
+healthy sources plus two small boards. All four small numbers were bugs, and **no two had the same
+cause**: our own page cap, a cookie-gated results table, an unchecked HTTP status, and a regex anchored on
+the wrong element. The only thing they shared was the *shape* of the symptom.
+
+**And the first write-up of this entry got Motion's cause wrong, which is its own lesson.** It said the
+site had changed its pagination parameter from `?page=` to `?start=`. The live site does behave that way,
+but the committed scraper already used `?start=` and already stopped on "no new hrefs" — the diagnosis
+came from reading the module's first 40 lines, seeing `MAX_PAGES = 6`, and letting a true site-level
+observation fill the gap instead of reading the pagination code underneath it. The real ceiling was ours.
+**A plausible external cause is the most comfortable place to stop looking**; the correction is to prefer
+the explanation that implicates your own constants until the external one is proven. The verifier that
+caught it did so by running the committed code, which is why the workflow had one.
+
+What it cost: Motion is one of Ben's best agency partners and was returning ~2.5% of its dev contract
+supply, for at least two days and probably longer. The two live Motion contracts on the 2026-07-24 apply
+doc ($75–100/hr and $69.5–76/hr) were both found by hand; the tool could not have surfaced them.
+
+Three corrections now in the code rather than in prose:
+
+1. **A fixed page cap cannot distinguish "the board ended" from "pagination broke".** Motion's loop
+   refetched page one six times and reported success. Walks now stop on *no new postings*, and keep
+   `MAX_PAGES` only as a runaway guard — so the next paginator change moves the count loudly.
+2. **Never treat an exception-free empty response as an empty board.** TEKsystems swallowed 403/503
+   sub-sitemaps as zero-`<loc>` documents. Status is checked now.
+3. **Excluding a source on a low count is a bet that the board is small.** That bet lost 4/4.
+   `DEFAULT_SOURCES` is the full registry; a source leaves it on evidence, never on suspicion.
+
+### Also this run
+
+- **A false alarm worth recording, because the reasoning was wrong in an instructive way.** Five digests
+  logged `extractor returned 5 job(s) … but the email carries 27 job link(s)`, and the identical count
+  across five emails read as a hard cap. There is none — the prompt forbids truncating and
+  `_EXTRACT_MAX_TOKENS` is 20000. Three were the same IntelliSearch template rendering ~5 jobs in the
+  body, and one was a **single-job** "Now Hiring" email that also carried 27 links, which is decisive:
+  the extra links are related-jobs rails and footer chrome, not postings. The extractor was correct and
+  the reconciliation did exactly its job. **The defect is the warning's wording** — "recovering the 22 it
+  left out" reads as data loss and cost a round of investigation.
+- **`mondo.gosnaphop.com` surfaced in the unclassified-host report** and is already Mondo's own sitemap
+  host — no action, the classifier working as intended.
+
 ## 2026-07-20 — the staleness run
 
 The run that exposed the tool's biggest blind spot. 358 jobs analyzed over a 7-day window; Ben had
@@ -128,6 +193,15 @@ conversation → archived and cold-applied to).
 ---
 
 ## Open bugs / next steps
+- **[COSMETIC · found 2026-07-24] The link-reconciliation warning reads as data loss.** `extractor
+  returned 5 job(s) for X, but the email carries 27 job link(s) — recovering the 22 it left out` fires on
+  every templated digest, where the surplus links are related-jobs rails rather than missed postings. It
+  is the tool working correctly, but the wording cost a full investigation this run. Reword to something
+  like `22 unclaimed links recovered as bare jobs (may be related-job chrome)`.
+- **[DEFERRED · 2026-07-24] No automatic rot detector.** A per-source floor warning when a count drops
+  >40% run-over-run was scoped and **deliberately declined** by Ben as likely-flaky for the value. The
+  standing mitigation is the health line in the run summary plus the corrected instinct that a low count
+  is a hypothesis. Revisit only if a scraper rots again undetected.
 - **[GAP · found 2026-07-23] Tier-2 browser queue can be 100% unfetchable — and the runbook oversells it.**
   On the 2026-07-23 run all 8 queued links were dead: 1 Indeed `pagead/clk` tracker → hard Cloudflare wall
   even in Ben's real Chrome; 7 `elinks.dice.com` email-click wrappers → expired to browser error pages, and

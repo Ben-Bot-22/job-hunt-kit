@@ -65,7 +65,7 @@ reason — its accessors default to empty, so a missing key costs a blank field,
   and `cluster.py` (free-text corpus fields grouped into ideas, so an aggregate over them isn't a lie),
   and `llm.py` (**the single generation path** — the one place a model client is constructed, with the
   provider read from `config/settings.yaml`. Never build a second one; that is what this file exists
-  to prevent), and `scrapers/` (the six agency job scrapers, plus the JSON-LD and posting helpers they
+  to prevent), and `scrapers/` (the seven agency job scrapers, plus the JSON-LD and posting helpers they
   share — here rather than in a leaf because they have two consumers, see below).
   **One requirements file:** every leaf pulls `-r ../core/requirements.txt`, so a leaf that needs
   none of it still installs all of it. That is the deliberate trade — one dependency file to reason
@@ -149,6 +149,10 @@ one appears.
   engine is `research/`, driven as `python -m research`.
 - `/sync-applied` — sync the applied-jobs sheet into the dedup cache.
 - `/tailor-cv` — build a JD-tailored résumé.
+- `/publish` — re-publish the public `job-hunt-kit` snapshot: pre-flight suite, the settings-substitution
+  check, dry-run, review, push (with a gate), cold-clone check. `scripts/EXTRACTION.md` remains the
+  *first-time seeding* page; this is the repeat path, and it exists because "what does the public repo
+  need" was being re-derived every time.
 
 **`.claude/skills/` holds two different kinds of thing, and the difference is machine-readable.** The
 five above are this repo's product. The rest are **vendored** third-party engineering skills, and

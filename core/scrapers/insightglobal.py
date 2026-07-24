@@ -26,7 +26,14 @@ MARKER = 'display:none;">'
 
 # TODO: replace with Ben's exact saved-search terms/URLs when provided.
 KEYWORDS = ["software developer", "react", "typescript", "node", "full stack developer"]
-MAX_PAGES = 2
+# RUNAWAY GUARD ONLY — not a coverage decision. The per-keyword walk already stops correctly on the
+# first page that returns no objects (`if not objs: break`), so this number should never be reached.
+# It was 2, which was an arbitrary ceiling sitting on top of a working stop condition and silently
+# capping the source at a quarter of its board: measured 2026-07-24, the same fetch returns 88 jobs at
+# 2 pages, 194 at 6, 281 at 10 and 350 at 20 — a count that moves with the cap is the cap's number,
+# not the board's (docs/operating/tuning.md). Hitting this logs a warning, because reaching it means
+# the stop condition stopped working.
+MAX_PAGES = 60
 THROTTLE = 0.7
 
 
@@ -44,7 +51,10 @@ def fetch() -> list[Job]:
                 continue
             objs = _extract(text, dec)
             if not objs:
-                break  # no more results for this keyword
+                break  # no more results for this keyword — the real stop condition
+            if page == MAX_PAGES:
+                log.warning("insightglobal '%s' hit MAX_PAGES=%d while still returning results — the "
+                            "count is a floor, not the board", kw, MAX_PAGES)
             for o in objs:
                 jid = o.get("JobID")
                 if jid in seen:

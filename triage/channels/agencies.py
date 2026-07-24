@@ -65,29 +65,57 @@ from core.scrapers import AGENCIES
 
 log = logging.getLogger("triage.channels.agencies")
 
-# The four sources measured healthy on 2026-07-22: insightglobal 87, teksystems 78, motion 27,
-# mondo 15. **`apex` and `kore1` are deliberately absent** — they returned 3 and 2 postings with no
-# error, which is precisely the documented silent-zero failure, and Apex's own module docstring
-# predicts it (its keyword filter is AJAX-gated, so a plain GET sees a shallow slice). Nothing in the
-# code can tell a rotted scraper from a genuinely small board, so they are excluded rather than
-# deleted: they are still market supply in `research/sources/`, and putting one back is one config
-# line. What would put it back is a fetch returning a DOUBLE-DIGIT count whose postings survive a
-# spot-check — at that point add the name here and say so in the commit.
-DEFAULT_SOURCES = ("insightglobal", "teksystems", "motion", "mondo")
+# All SEVEN sources, measured live 2026-07-24 after the caps below were lifted: insightglobal 432,
+# motion 275, apex ~488, teksystems 80, scion 15, mondo 14, kore1 6.
+#
+# **`apex` and `kore1` were excluded until 2026-07-24 and are now back, and the reason is the lesson.**
+# They were held out because they returned 3 and 2 postings with no error — the documented silent-zero
+# shape — on the stated condition that a DOUBLE-DIGIT count surviving a spot-check would bring them
+# back. Checking by hand found the premise was wrong for BOTH, and for two more besides: apex 3 was
+# `?page=N` rendering an empty table without the Drupal session cookie; kore1 2 was a regex anchored
+# on category headings rather than posting rows (really 6, from a 64-posting board); motion 19 was our
+# own MAX_PAGES=6, a 120-href ceiling on a 797-posting board; teksystems was HTTP status never being
+# checked, so a 403 sub-sitemap read as empty. Four different bugs, one shape: a small plausible number
+# that looks like a small board. `scion` is new — the sixth PRIMARY-tier agency, wired the same day.
+#
+# THEN A SECOND SWEEP, same day, after the first fix shipped: `insightglobal` had never been examined
+# because 88 "looked healthy". Its `MAX_PAGES = 2` sat on top of an already-correct stop condition and
+# was costing 344 postings — the source really returns **432**. A cap that nobody suspects because its
+# number is not obviously small is the same bug wearing a better disguise, and the check that finds it
+# is mechanical: raise the cap, and if the count moves, the count was the cap's.
+#
+# So the standing rule stands, with its correction: a low count is a HYPOTHESIS. Excluding a source on
+# one is a bet that the board is small, and here that bet lost four times out of four. Spot-check
+# first, then exclude — and prefer a walk that stops on "no new postings" to a fixed cap, because the
+# former degrades loudly (see `docs/operating/tuning.md`).
+DEFAULT_SOURCES = ("insightglobal", "teksystems", "motion", "mondo", "apex", "kore1", "scion")
 
 # Per-source cap, applied AFTER the freshness window and newest-first — the same shape and the same
 # reason as `boards._MAX_PER_BOARD`. An agency that republishes its whole board at once should cost
 # one noisy run, not a run that never finishes.
-_MAX_PER_SOURCE = 200
+#
+# Raised 200 -> 600 on 2026-07-24: once the scraper caps were lifted, insightglobal returns 432 and
+# motion 275, so 200 had quietly become a THIRD ceiling — downstream of the two we had just fixed, and
+# invisible because it clips after the freshness window rather than at the source. It only binds now
+# if a single agency puts 600 in-window postings into one run, which is the "republished the whole
+# board" case it exists for.
+_MAX_PER_SOURCE = 600
 
-# Wall-clock ceiling for the whole channel, in seconds. TEKsystems' healthy run is 131s and the four
-# run concurrently, so this is a hang detector with room to spare rather than a performance knob.
+# Wall-clock ceiling for the whole channel, in seconds. The seven run concurrently, so this bounds the
+# SLOWEST source, not their sum.
+#
+# Raised 300 -> 600 on 2026-07-24, and this one is a real trade rather than a guard. Apex's full dev
+# slice is 488 detail fetches, ~317 s, which is *past* the old 300 s deadline — and a source still
+# running at the deadline is ABANDONED, so the old number did not cap Apex at 300 s of coverage, it
+# would have thrown all of it away. Measured today: motion 201 s, apex ~317 s, teksystems 139 s,
+# insightglobal 97 s, scion 85 s, mondo 21 s, kore1 8 s. 600 leaves Apex, the new long pole, most of a
+# doubling of headroom before the ceiling is real again.
 #
 # One shared DEADLINE rather than a timeout per source: the sources are waited on one after another,
 # so four per-source ceilings of 300s would stack into twenty minutes in front of a run that is
 # supposed to be bounded. A deadline bounds the channel, which is the number that actually matters.
 # See the module docstring on why a source past it is abandoned rather than stopped.
-_DEADLINE = 300.0
+_DEADLINE = 600.0
 
 # The last run's per-source counts, as `name -> (raw, kept)`: what the scraper returned, and what
 # survived the freshness window and the cap. A module-level side channel because `fetch(days, sample)`

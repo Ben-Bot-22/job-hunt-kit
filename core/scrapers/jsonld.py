@@ -21,12 +21,29 @@ def jobpostings(page: str) -> list[dict]:
     """All JobPosting objects found in a page's JSON-LD blocks."""
     out: list[dict] = []
     for m in _SCRIPT.finditer(page):
-        try:
-            data = json.loads(m.group(1).strip())
-        except ValueError:
+        data = _loads(m.group(1).strip())
+        if data is None:
             continue
         out.extend(o for o in _walk(data) if _is_jobposting(o))
     return out
+
+
+def _loads(block: str):
+    """Parse a JSON-LD block, tolerating trailing garbage after the first value.
+
+    Strict `loads` is right and is tried first. The fallback exists because hand-templated ATS pages
+    emit a valid object and then junk — KORE1's SmartSearch portal appends a stray `}` to every
+    detail page, which cost us the whole posting (title, location, date) and dropped us to
+    scraping the rendered page text. A prefix that decodes cleanly is still the site's own data.
+    """
+    try:
+        return json.loads(block)
+    except ValueError:
+        pass
+    try:
+        return json.JSONDecoder().raw_decode(block)[0]
+    except ValueError:
+        return None
 
 
 def _walk(data):

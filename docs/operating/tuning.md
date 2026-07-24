@@ -50,7 +50,7 @@ failure directions.
 | `config/settings.yaml` · `liveness.workers` = 16 | pure network waits, so this is nearly free | a serial-feeling check phase | the run summary showing liveness as a large share of wall-clock |
 | `config/settings.yaml` · `models.analyze` = `claude-opus-4-8` | — | a cheaper model here is the one substitution that changes *what the tool is*: the ranking is the product | rankings you stop trusting — a role you would apply to sitting below one you would not |
 | `config/settings.yaml` · `models.prefilter` = `claude-sonnet-5` | — | a weaker screen kills in-lane jobs, and a kill is invisible unless you read the skipped section | in-lane roles in `Rejected / skipped` with a screen reason |
-| `config/settings.yaml` · `channels.agencies.sources` = `[]` | naming `apex` or `kore1` puts back two sources measured at 3 and 2 postings | `[]` means the four measured healthy | see §5 — a source returning single digits with no error is the silent-zero failure, and the counts in the run summary are the only detector |
+| `config/settings.yaml` · `channels.agencies.sources` = `[]` | naming a subset restricts the run to it | `[]` means **all seven** — every registered scraper, since 2026-07-24, when the four excluded-or-suspect ones turned out to be truncating rather than small | see §5 — a source returning single digits with no error is the silent-zero failure, and the counts in the run summary are the only detector |
 | `config/settings.yaml` · `report.top_terms` = 30 | a longer, more inspectable report — at 30 it renders ~230 lines over 1,143 postings, about half of it clustered term lists | a report you can skim but cannot audit: the long tail is where a mis-clustered idea hides | a term list whose last entries are still obviously frequent — the cut is landing inside the signal |
 | `config/settings.yaml` · `report.top_employers` = 20 | as above | as above | the employer table ending while counts are still in double digits |
 | `config/settings.yaml` · `report.bls_areas` = `National` only | adding a metro anchors wages on a local geography | national-only hides a real local gap — the national/DFW gap measured 2026-07-22 was 6.3% on the mean and 16% at p90 | a metro line printed under a remote heading: "remote" is not a BLS geography, so a metro here is a local wage labelled as something it is not |
@@ -123,8 +123,8 @@ answer — which is why it can go unnoticed for months.
 | `triage/channels/mail.py` · `_MAX_EMAILS` = 250 | a backlogged inbox is read in one run, at proportional time | a normal day's mail is truncated and the excess is never revisited | the `mail` count sitting exactly at the cap |
 | `triage/channels/boards.py` · `_MAX_PER_BOARD` = 200 | a board that republishes wholesale costs a long run instead of a noisy one | a large employer's board is truncated newest-first | a board count sitting exactly at 200 |
 | `triage/channels/paste.py` · `_MAX_URLS` = 200 | as above, for `--paste-file` | a long paste file silently truncated | a paste count at exactly 200 |
-| `triage/channels/agencies.py` · `_MAX_PER_SOURCE` = 200 | same shape and same reason as `_MAX_PER_BOARD` | an agency's board truncated after the freshness window | a source count at exactly 200 |
-| `triage/channels/agencies.py` · `_DEADLINE` = 300.0 | a hang detector with less room: TEKsystems' *healthy* run is 131 s and the four sources run concurrently | a slow-but-working source is abandoned mid-run | a source reporting 0 in a run where it worked yesterday, with the channel finishing at ~300 s. **Not promoted:** one shared deadline bounds the channel; four per-source timeouts would stack to twenty minutes, which is the number nobody wanted |
+| `triage/channels/agencies.py` · `_MAX_PER_SOURCE` = 600 | same shape and same reason as `_MAX_PER_BOARD` | an agency's board truncated after the freshness window — at 200 this was silently clipping insightglobal (432) and motion (275) *downstream* of the source caps we had just lifted | a source count at exactly this number |
+| `triage/channels/agencies.py` · `_DEADLINE` = 600.0 | more headroom for the long pole; the seven run concurrently so this bounds the SLOWEST, not their sum | a slow-but-working source is abandoned mid-run and returns **zero**, not a partial result — which is why Apex's ~317 s dev slice could not live under the old 300 s | a source reporting 0 in a run where it worked yesterday. **Not promoted:** one shared deadline bounds the channel; seven per-source timeouts would stack, which is the number nobody wanted |
 | `triage/channels/agencies.py` · `DEFAULT_SOURCES` | see §5 | see §5 | see §5 |
 | `triage/dedup.py` · `_SHINGLE` = 5 | longer shingles: only near-identical text overlaps | shorter ones and shared stock phrases start overlapping, which is exactly the false merge `overlap` exists to prevent | a merge justified by boilerplate |
 | `triage/dedup.py` · `_MAX_EMBED_CHARS` = 4000 | past ~512 word pieces this is weight, not signal | too little text and two different reqs at one company look identical | merges between two genuinely different roles at the same employer |
@@ -207,18 +207,33 @@ cannot see:
 
 | knob | raising it | lowering it | wrong — what you would see |
 |---|---|---|---|
-| `core/scrapers/insightglobal.py` · `MAX_PAGES` = 2 | more coverage, linearly slower | 87 postings came from 2 pages; fewer pages cuts the newest slice | a count that tracks the cap rather than the board |
+| `core/scrapers/insightglobal.py` · `MAX_PAGES` = 60 | runaway guard only — the per-keyword walk already stops on the first empty page | below the real depth it truncates silently, which is what `2` was doing (88 jobs instead of 432) | the MAX_PAGES warning in the log |
 | `core/scrapers/insightglobal.py` · `THROTTLE` = 0.7 | politer | the fastest way to get a scraper blocked, which presents as rot | a healthy source going to 0 shortly after a throttle was lowered |
-| `core/scrapers/teksystems.py` · `MAX_JOBS` = 150 | more of the sitemap fetched, and this source is already the slowest at 131 s | fewer jobs | the channel hitting `_DEADLINE` |
+| `core/scrapers/teksystems.py` · `MAX_SITEMAPS` = 20 | runaway guard only — the walk stops on "no new postings", and 4 is the live depth | below 4 it truncates the board | a count that moves when you change this number |
+| `core/scrapers/teksystems.py` · `MAX_JOBS` = 150 | more of the sitemap fetched, and this source is already the slowest | fewer jobs | the channel hitting `_DEADLINE` |
 | `core/scrapers/teksystems.py` · `THROTTLE` = 0.25 | politer, slower | as above | as above |
 | `core/scrapers/mondo.py` · `MAX_JOBS` = 200 | more of the sitemap | fewer | a count at exactly the cap |
 | `core/scrapers/mondo.py` · `THROTTLE` = 0.3 | politer | — | — |
-| `core/scrapers/motion.py` · `MAX_PAGES` = 6 | more coverage | 27 postings came from 6 pages | a count at exactly the cap |
+| `core/scrapers/motion.py` · `MAX_PAGES` = 80 | runaway guard only — the walk stops on "no new hrefs", and 41 pages is the live depth | below 41 it truncates the board | a count that moves when you change this number |
 | `core/scrapers/motion.py` · `THROTTLE` = 0.3 | politer | — | — |
-| `core/scrapers/apex.py` · `MAX_PAGES` = 8 | 8 pages yielded 3 postings — the keyword filter is AJAX-gated, so a plain GET sees a shallow slice regardless | — | raising this and getting the same 3 is the evidence that it is the *page*, not the cap |
+| `core/scrapers/apex.py` · `MAX_JOBS` = 600 | **the one real coverage cap here.** 488 dev postings × ~0.65 s = ~317 s, and a source past `_DEADLINE` is abandoned entirely — so this trades against the deadline, not against politeness | fewer of the newest postings | the "count is a floor" warning in the log |
 | `core/scrapers/apex.py` · `THROTTLE` = 0.3 | politer | — | — |
-| `core/scrapers/kore1.py` · `MAX_JOBS` = 60 | as Apex — 2 postings against a cap of 60 | — | as Apex |
+| `core/scrapers/kore1.py` · `MAX_JOBS` = 60 | more of the board — KORE1 publishes its whole board in one response, so there is no pagination to get wrong | fewer | a count at exactly the cap |
 | `core/scrapers/kore1.py` · `THROTTLE` = 0.3 | politer | — | — |
+| `core/scrapers/scion.py` · `MAX_PAGES` = 30 | more of the listing walked; 22 pages is the live depth | below 22 it truncates the board | a count that moves when you change this number |
+| `core/scrapers/scion.py` · `MAX_JOBS` = 60 | more postings fetched after the dev-slug filter | fewer | a count at exactly the cap |
+| `core/scrapers/scion.py` · `THROTTLE` = 0.3 | politer | — | — |
+
+**Why three of these now say "runaway guard only" (2026-07-24).** They used to be real caps, and that was
+the bug: **a fixed page cap cannot tell "the board ended" from "I stopped looking".** Both produce a loop
+that finishes without error and a count that looks like an answer. Motion is the case in point — `MAX_PAGES
+= 6` at 20 postings a page put a hard 120-href ceiling on a board of 797, and it returned 19 dev postings
+for months while reading as healthy. The walks now stop on **no new postings** and keep the number only as
+a runaway backstop that logs a warning when it fires, so the ceiling can no longer be silent.
+
+**The number to distrust is a count that moves when you change the cap.** If raising `MAX_PAGES` raises the
+result, the cap was the board's edge, not the site's. That is the check that would have caught this in
+minutes. See §5 and the 2026-07-24 entry in the engineering log.
 
 ---
 

@@ -43,15 +43,18 @@ market you did not choose. Neither is better; they answer different questions.
 |---|---|---|---|---|
 | **`paste`** | exactly the postings you hand it | one at a time | none | always — it is the zero-setup way to try the tool, and the only channel that works with nothing configured |
 | **`boards`** | only the companies you name, from their real ATS | low — roughly 15–50/week per company | none | you have a target list. **The highest-precision source here**: no noise, but it finds nothing you did not already think of |
-| **`agencies`** | contract roles from six staffing firms, **and they usually state a rate** | ~180 per run | none | you would take contract work. The only source that reliably publishes pay, which also makes it the one worth reading for what the market pays *you* |
+| **`agencies`** | contract roles from seven staffing firms, **and they usually state a rate** | ~630 per run | none | you would take contract work. The only source that reliably publishes pay, which also makes it the one worth reading for what the market pays *you* |
 | **`mail`** | whatever recruiters already send you | your inbox | none | you are on macOS and already get recruiter mail. **The highest-signal source of all** — someone chose to contact you — but macOS-only and it needs Apple Mail configured first |
 | **`gmail`** | — | — | — | never, yet. It is a documented stub that raises. `paste` and `boards` cover the same ground keylessly |
 
-**The cost of `agencies` is time, not money:** it scrapes six live sites, so budget ~2 minutes per run,
-and it is off in the shipped settings for that reason. Reach it for one run with
-`python -m triage --channels agencies`. Inside it, four scrapers are on by default and measured healthy;
-**Apex and KORE1 are excluded** because they return 2–3 jobs each and may already be broken — you cannot
-tell a rotted scraper from a small board without checking by hand.
+**The cost of `agencies` is time, not money:** it scrapes seven live sites — Insight Global, TEKsystems,
+Motion, Mondo, Apex, KORE1 and Scion — so budget a few minutes per run, and it is off in the shipped
+settings for that reason. Reach it for one run with `python -m triage --channels agencies`.
+
+All seven were measured live on **2026-07-24** and all seven return real postings. Apex and KORE1 had been
+excluded from the shipped `sources:` list on the theory that their 2–3 postings meant small or broken
+boards; both turned out to be **truncating**, and both are fixed — see "the 2026-07-24 repair" below before
+excluding a source on the strength of a low count again.
 
 ### Sources of market data (`python -m research.market`)
 
@@ -138,22 +141,58 @@ mail,agencies` overrides the set for one run without editing anything.
 |---|---|---|---|---|---|
 | `paste` | nothing — URLs on the command line or in a file | none | any | on | nothing to break; a URL that won't fetch degrades like any other |
 | `boards` | Greenhouse `boards-api.greenhouse.io` and Lever `api.lever.co`, public read endpoints, one request per board with the JD included | none | any | on, **with empty lists** — it reports `boards 0` until you name boards | a dead board 404s and costs you that board; **there is no HTML here to rot** |
-| `agencies` | six staffing firms' own boards, **scraped** (`core/scrapers/`) | none | any | **off** | **silent zero — see below** |
+| `agencies` | seven staffing firms' own boards, **scraped** (`core/scrapers/`) | none | any | **off** | **silent zero — see below** |
 | `mail` | Apple Mail, via `osascript` | none | **macOS only** | on in the shipped settings | not on macOS: turn it off. First run raises an Automation permission dialog **a scheduled job cannot answer** |
 | `gmail` | nothing yet | Google OAuth | any | **not built** | **raises** if you enable it, on purpose: an empty list would look exactly like a working channel with a quiet inbox |
 
-**`agencies` is the rot-prone one and it is the reason this page exists.** The six scrapers parse live
+**`agencies` is the rot-prone one and it is the reason this page exists.** The seven scrapers parse live
 HTML — sitemaps, embedded JSON, JSON-LD — and a site that restructures does not raise, it stops
 matching. **The per-source counts in the run summary are the only detector**, and the run summary prints
 them for exactly that reason:
 
     agencies 45 (insightglobal 30, teksystems 15, motion 0 ⚠)
 
-Last measured live, **2026-07-22**: Insight Global 87 · TEKsystems 78 · Motion 27 · Mondo 15 · **Apex 3 ·
-KORE1 2**. The last two are either genuinely small boards or already partly rotted, and nothing in the
-code can tell you which — which is why they are excluded from the shipped `sources:` list. A source that
-normally returns 40 and returns 0 is a bug report, not an empty market. Nothing in the test suite can
-catch this: pinning a 2026-07 HTML fixture would only prove the parser still parses last year's page.
+Last measured live, **2026-07-24**, after the repair described below: Insight Global 88 · **Motion 275** ·
+**Apex 150** · **TEKsystems 80** · **Scion 15** · Mondo 14 · **KORE1 6**.
+
+**The 2026-07-24 repair, and what it teaches.** On 2026-07-22 these read Insight Global 87 · TEKsystems 78 ·
+Motion 27 · Mondo 15 · Apex 3 · KORE1 2, and that line was read as "four healthy sources plus two small
+boards". It was wrong about all four of the small numbers. **Every one of them was a silent truncation, and
+each failed differently:**
+
+- **Motion** (19 of 275) — **our own `MAX_PAGES = 6`.** At 20 postings a page that is a hard 120-href
+  ceiling on a board carrying 797, and the cap never announced itself because a loop that stops at its cap
+  looks exactly like a loop that ran out of board. Compounding it, the scraper read `/tech-jobs/contract`
+  and `/tech-jobs/direct-hire` separately and the latter now 404s; the combined `/tech-jobs` listing is a
+  superset of both.
+- **Apex** (3 of 150) — `?page=N` renders an empty results table from page 2 onward unless the request
+  carries the session cookie the Drupal search form sets.
+- **TEKsystems** (80 unique, previously 84 records over only 80 distinct links) — **this one was a
+  correctness bug, not a coverage bug.** The board had not shrunk and the sitemap was not truncating
+  against supply (1,468 unique postings against 1,541 live on the board's own search API). Two real
+  defects: the scraper caught exceptions but **never checked HTTP status**, so a sub-sitemap answering 403
+  or 503 contains no `<loc>` and was indistinguishable from an empty one — each lost fetch costs 25–30 dev
+  postings; and discovery never de-duplicated, so URLs repeated across sub-sitemaps were emitted twice,
+  making the count itself unstable run to run.
+- **KORE1** (2 of 6) — the listing regex anchored on the page's category headings rather than its posting
+  rows, keeping only the first job under each heading.
+
+**A correction worth keeping, because the first diagnosis was wrong in an instructive direction.** Motion's
+failure was initially written up here as *the site changed its pagination parameter from `?page=` to
+`?start=`*. That is a true observation about the live site — `?page=2` really does return a byte-identical
+href set — but it was never this scraper's bug: the committed code already paginated with `?start=` and
+already stopped on "no new hrefs". The ceiling was **ours**. Blaming the site points a future reader
+outward, at other people's HTML; the real lesson points inward, at a constant we chose. **Prefer the
+inward explanation until the outward one is proven.**
+
+So the standing advice on this page — "you cannot tell a rotted scraper from a small board without checking
+by hand" — held, and the checking by hand was overdue by two days. **A small number is a hypothesis, not a
+measurement.** The corollary now built into the code: a walk that stops on *no new postings* degrades loudly
+when a paginator changes, while a fixed page cap degrades silently, so three of these scrapers keep their
+`MAX_PAGES` only as a runaway guard (see `docs/operating/tuning.md`).
+
+A source that normally returns 40 and returns 0 is a bug report, not an empty market. Nothing in the test
+suite can catch this: pinning a 2026-07 HTML fixture would only prove the parser still parses last year's page.
 
 It is also the only channel that returns **contract** work, which is why it survives being the fragile
 one. It is off by default because it is a 130 s+ scrape in front of a run.
@@ -198,7 +237,7 @@ failed run.
 | **Adzuna** | broad US aggregate, contract and permanent as two queries | `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` | free tier | empty list, logged. **Attribution required** — see below. Its salary figures are model *predictions*, labelled as such |
 | **JSearch** (RapidAPI) | Google-for-Jobs aggregate | `RAPIDAPI_KEY` | free tier ~200 requests/month, ~1 request per search term | empty list, logged |
 | **TheirStack** | agency job search | `THEIRSTACK_KEY` | **paid — one credit per job *returned***, capped by `MAX_JOBS` | empty list, logged. The only source here that spends money |
-| **the six agency scrapers** | contract supply, shared with the `agencies` channel | none | free | **silent zero — §3 again.** Same code, same detector |
+| **the seven agency scrapers** | contract supply, shared with the `agencies` channel | none | free | **silent zero — §3 again.** Same code, same detector |
 
 **Attribution is enforced in code, not left to a template.** `research/sources/__init__.py` stamps an
 attribution line onto every record from a source whose terms require one, and `fetch_all` **drops** a

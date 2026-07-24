@@ -13,7 +13,6 @@ _TIER_RANK = {"PRIMARY": 0, "SECONDARY": 1, "OPPORTUNISTIC": 2}
 _VERDICT_RANK = {"STRONG_FIT": 0, "FIT": 1, "LOW_FIT": 2, "SKIP": 3}
 
 _CONTRACTISH = {"contract", "contract-to-hire", "cth", "", "unknown"}
-_REMOTEISH = {"remote", "hybrid", "", "unknown"}
 
 
 def finalize_tier(job: Job) -> str:
@@ -23,8 +22,9 @@ def finalize_tier(job: Job) -> str:
     hay = f"{job.company} {job.source_platform}".lower()
     is_agency = a.is_agency or any(x in hay for x in config.primary_agencies())
     is_platform = any(x in hay for x in config.secondary_platforms())
-    # PRIMARY = agency contract, remote/DFW — the fastest-fill lane.
-    if a.verdict != "SKIP" and is_agency and a.employment_type in _CONTRACTISH and a.cadence in _REMOTEISH:
+    # PRIMARY = agency contract of ANY cadence (remote OR onsite) — the fastest-fill lane now that Ben
+    # is relocation-open. Cadence no longer gates this: onsite agency contract leads too.
+    if a.verdict != "SKIP" and is_agency and a.employment_type in _CONTRACTISH:
         return "PRIMARY"
     if is_platform:
         return "SECONDARY"
