@@ -71,6 +71,63 @@ Three corrections now in the code rather than in prose:
 - **`mondo.gosnaphop.com` surfaced in the unclassified-host report** and is already Mondo's own sitemap
   host — no action, the classifier working as intended.
 
+### The second sweep, same day — the caps were the bug the whole time
+
+Ben's rule, on reading the above: *an artificial cap is removed or it justifies itself.* Applying it
+found the first sweep had fixed four scrapers and left three ceilings standing.
+
+| knob | was | now | effect |
+|---|---|---|---|
+| `insightglobal.py` · `MAX_PAGES` | 2 | 60 (guard) | **88 → 432** |
+| `apex.py` · `MAX_JOBS` | 150 | 600 | **150 → ~488**, the whole dev slice |
+| `agencies.py` · `_MAX_PER_SOURCE` | 200 | 600 | was clipping 432 and 275 *downstream* |
+| `agencies.py` · `_DEADLINE` | 300 s | 600 s | Apex's slice is ~317 s |
+
+Agency supply: **628 → ~1,300 per run**, ~320 s wall-clock, Apex the new long pole.
+
+**Insight Global is the one to remember, because nothing about it looked wrong.** Its per-keyword walk
+*already* stopped correctly on the first empty page; `MAX_PAGES = 2` was an arbitrary ceiling bolted on
+top of working logic, costing 344 postings. It was never examined during the first sweep because 88
+reads as a healthy number — the earlier lesson was "distrust a *small* count", and this one was not
+small. **The generalised version: distrust any count you have never tried to exceed.** The check is
+mechanical and takes a minute — raise the cap; if the count moves, the count was the cap's number and
+not the board's. Measured: 2 pages 88 · 6 pages 194 · 10 pages 281 · 20 pages 350 · uncapped 432.
+
+**Apex keeps a cap, and it is the one in `core/scrapers/` that is a real coverage decision.** Its 488
+dev postings cost ~317 s, and the channel *abandons* a source still running at `_DEADLINE` — so an
+uncapped Apex under the old 300 s deadline returns **zero**, not a partial board. The cap and the
+deadline had to move together, and the docstring now states that rather than calling it politeness.
+
+`_MAX_PER_SOURCE` was the third ceiling and the easiest to miss: it clips *after* the freshness window
+rather than at the source, so lifting the two scraper caps just relocated the truncation one layer
+downstream. **When you lift a limit, look for the next one.**
+
+### The public snapshot had been shipping a red test suite
+
+Building the `/publish` skill and running it for the first time surfaced something unrelated to the
+scrapers: a fresh clone of `job-hunt-kit` ran **7 failures**, and had since the repo went public.
+Verified against the previous public commit — same 7, so this was not new breakage.
+
+None was a real defect. The extraction substitutes `config/example/settings.yaml` for
+`config/settings.yaml`, and seven tests asserted values out of the owner's file — `max_workers == 12`,
+an empty boards watchlist, mail being enabled. **AGENTS.md already forbids exactly this** ("never pin a
+config value that states no rule: it is a photograph"), and the rule had no enforcement, so seven tests
+drifted into breaking it.
+
+Fixed three ways: photograph assertions deleted (the surrounding tests kept — in `test_settings.py` the
+line *above* the photograph is the real rule and it always passed); one genuinely obsolete test deleted
+outright (`a fresh clone must not hit other people's boards` is false by design now that the example
+names boards); and three real rule-tests decoupled by passing `channels.ingest` the `enabled` callable
+it already accepted. **No production code changed and no new tests were added.**
+
+The public tree now reads `583 passed, 19 skipped`. Two process lessons:
+
+1. **`pytest` is not in `core/requirements.txt`** — the documented install does not let a stranger run
+   the suite the repo ships as evidence. Root `requirements.txt` has it. Not fixed; noted below.
+2. **`JOBSDB_CONFIG_HOME=config/example` is not a faithful stand-in for a public clone.** It leaves the
+   file at `config/example/settings.yaml` while extraction copies it *to* `config/settings.yaml`, so
+   path assertions differ. The only faithful check is running the suite against the extracted tree.
+
 ## 2026-07-20 — the staleness run
 
 The run that exposed the tool's biggest blind spot. 358 jobs analyzed over a 7-day window; Ben had
@@ -193,6 +250,17 @@ conversation → archived and cold-applied to).
 ---
 
 ## Open bugs / next steps
+- **[GAP · found 2026-07-24] `pytest` is not installable from the documented path.** A stranger
+  following the README installs `core/requirements.txt` and gets `No module named pytest` — the suite
+  the public repo ships as evidence cannot be run without knowing to install the root
+  `requirements.txt` instead. One line in the README or in `core/requirements.txt` closes it.
+- **[GAP · found 2026-07-24] Nothing enforces the no-photographs rule.** AGENTS.md forbids pinning a
+  config value that states no rule; seven tests broke it and shipped red publicly for weeks. Ben
+  declined a guard test for now (see the deferred entry below). The `/publish` cold-clone step is the
+  only detector.
+- **[DEFERRED · 2026-07-24] A guard test for the above.** An AST-walking test that fails when a test
+  reads the real settings file for a *value* would be the same pattern as `core/test_single_path.py`.
+  Deliberately not added — Ben's call was "no new tests".
 - **[COSMETIC · found 2026-07-24] The link-reconciliation warning reads as data loss.** `extractor
   returned 5 job(s) for X, but the email carries 27 job link(s) — recovering the 22 it left out` fires on
   every templated digest, where the surplus links are related-jobs rails rather than missed postings. It
