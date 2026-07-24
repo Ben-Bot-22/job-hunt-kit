@@ -42,7 +42,7 @@ def test_one_crashing_channel_does_not_kill_the_run() -> None:
     """The others' jobs still arrive, and the crash is on the record rather than in a traceback."""
     good = _job("https://boards.greenhouse.io/acme/jobs/1", "Acme", "Engineer")
     candidates, all_extracted = channels.ingest(
-        3, channels={"broken": _boom, "mail": _channel(good)})
+        3, channels={"broken": _boom, "mail": _channel(good)}, enabled=lambda _: True)
     assert [j.link for j in candidates] == [good.link]
     assert all_extracted == [good]
     assert [(r.name, r.status) for r in channels.LAST_RUN] == [("broken", "crashed"), ("mail", "ok")]
@@ -89,7 +89,7 @@ def test_the_same_job_from_two_channels_appears_once() -> None:
     from_board = _job("https://boards.greenhouse.io/acme/jobs/1", "Acme", "Senior Engineer")
     from_mail = _job("https://boards.greenhouse.io/acme/jobs/1?utm_source=alert", "Acme", "Senior Engineer")
     candidates, all_extracted = channels.ingest(
-        3, channels={"boards": _channel(from_board), "mail": _channel(from_mail)})
+        3, channels={"boards": _channel(from_board), "mail": _channel(from_mail)}, enabled=lambda _: True)
     assert [j.link for j in candidates] == ["https://boards.greenhouse.io/acme/jobs/1"]
     assert len(all_extracted) == 2
 

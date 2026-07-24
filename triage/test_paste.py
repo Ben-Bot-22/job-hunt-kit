@@ -252,6 +252,6 @@ def test_paste_jobs_flow_through_the_registry_with_mail() -> None:
     registry = {"mail": lambda d, s=None: [mailed],
                 "paste": partial(paste.fetch, urls=[_ACME, _BETA],
                                  fetch_jd=_fake_fetch, backfill=_fake_backfill)}
-    candidates, all_extracted = channels.ingest(3, channels=registry)
+    candidates, all_extracted = channels.ingest(3, channels=registry, enabled=lambda _: True)
     assert len(candidates) == 3 and len(all_extracted) == 3
     assert channels.counts_line(channels.LAST_RUN) == "mail 1 · paste 2"

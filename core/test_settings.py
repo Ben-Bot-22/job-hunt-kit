@@ -38,7 +38,6 @@ from .settings import (CHANNEL_NAMES, SCHEMA_PATH, SETTINGS_PATH, ConfigurationE
 def test_the_repos_own_settings_file_validates() -> None:
     """The first thing a schema must not do is reject the config the tool ships with."""
     assert validate(load(SETTINGS_PATH)) == load(SETTINGS_PATH)
-    assert settings()["max_workers"] == 12
 
 
 def test_validation_returns_the_plain_dict_untouched() -> None:

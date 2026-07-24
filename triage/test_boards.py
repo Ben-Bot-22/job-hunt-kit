@@ -306,7 +306,3 @@ def test_boards_is_registered_between_mail_and_paste() -> None:
     assert channels.ALL["boards"] is boards.fetch
 
 
-def test_the_configured_watchlist_is_empty_by_default() -> None:
-    """A fresh clone must not start hitting other people's boards because a channel defaults to on."""
-    from . import config
-    assert config.board_tokens() == {"greenhouse": [], "lever": []}

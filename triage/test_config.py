@@ -225,8 +225,11 @@ def test_a_malformed_rubric_does_not_stop_the_tool_loading_its_config(tmp_path, 
     config.goal_profile.cache_clear()
 
     assert config.goal_profile() == broken
-    assert config.model("analyze") == "claude-opus-4-8"   # the operational half is untouched
-    assert config.channel_enabled("mail") is True
+    # The operational half is untouched. WHICH model and WHICH channels is configuration — asserting
+    # the values here would photograph one clone's settings; asserting that they still answer is the
+    # rule this test exists for.
+    assert config.model("analyze")
+    assert isinstance(config.channel_enabled("mail"), bool)
 
     config.goal_profile.cache_clear()
 

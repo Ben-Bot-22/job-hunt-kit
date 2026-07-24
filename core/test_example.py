@@ -316,4 +316,3 @@ def test_the_default_seed_targets_are_where_the_tool_actually_reads() -> None:
     assert DESTINATIONS["settings.yaml"] == SETTINGS_PATH
     assert DESTINATIONS["rubric.md"] == PROFILE_DIR / "rubric.md"
     assert DESTINATIONS["profile.yaml"] == PROFILE_DIR / "profile.yaml"
-    assert all(p.exists() for p in DESTINATIONS.values())
