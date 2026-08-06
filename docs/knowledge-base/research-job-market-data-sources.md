@@ -9,7 +9,7 @@ actual HTTP call on that date, not from documentation alone.
 > Paths below have been updated in place; every measurement is as originally taken.
 
 > **Note on location.** Settled: `docs/` is the single doc root. Runbooks live in `docs/operating/`;
-> this is a one-off research artifact tied to a wayfinding ticket, so it lives in `docs/research/`.
+> this is a one-off research artifact tied to a wayfinding ticket, so it lives in `docs/knowledge-base/`.
 
 ---
 

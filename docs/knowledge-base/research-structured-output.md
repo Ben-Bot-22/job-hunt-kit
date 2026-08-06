@@ -129,7 +129,7 @@ Two live calls total. No loop, no re-scoring sweep.
    preserved.
 6. **Tracing stays off.** Nothing here enables it; `langsmith` was already in the tree via
    `langchain-core` and remains dormant unless `LANGSMITH_TRACING=true`. See
-   [langchain-stack-reality-check.md](langchain-stack-reality-check.md) §2 for why that matters here.
+   [langchain-stack-reality-check.md](research-langchain-stack.md) §2 for why that matters here.
 
 ## 5. Cost of the dependency
 

@@ -14,7 +14,7 @@ Two failure directions, both silent, because nothing in the pipeline reads the p
     and not an accident — so a drift in either direction makes the page describe a shape nobody is
     running. Checked in both directions on purpose.
   * **a quoted line stops being a quote.** The guide argues from verbatim excerpts (a `CAP AT
-    LOW_FIT` entry, the body-shop tell rule, the precedence sentence the retrieval preamble states).
+    LOW_FIT` entry, the hard-filter list, the precedence sentence the retrieval preamble states).
     Reworded upstream, they become the page's own words wearing quotation marks, which is worse than
     a paraphrase because it reads as evidence.
 
@@ -28,6 +28,9 @@ Pure file reads: no network, no key, no model.
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "The rubric guide still quotes the rubric it explains."
 import re
 from pathlib import Path
 

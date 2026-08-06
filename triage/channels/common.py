@@ -25,6 +25,7 @@ import logging
 import re
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from email import policy
 from functools import lru_cache
 
@@ -59,22 +60,104 @@ _JOB_HINT = re.compile(
 #
 # Detection is DEFAULT-SAFE: a message is correspondence unless it is provably automated. Getting this
 # backwards archives a live conversation, so the failure mode is chosen deliberately.
+#
+# The job-board domains are matched WITH THEIR SUBDOMAINS, and that is the whole point of the
+# `(?:[\w-]+\.)*` group (2026-07-27). The list used to spell literal `@dice\.com`, which does not match
+# `dice@connect.dice.com` — the address Dice actually sends job alerts from — so roughly fifty automated
+# Dice blasts were classified as human correspondence in one run. They crowded the two genuine leads out
+# of the do-not-cold-apply section and held 180 jobs back from the archive list. A board that mails from
+# one subdomain today will mail from another tomorrow; match the registrable domain, not the envelope.
 _AUTOMATED_SENDER = re.compile(
     r"(no[-_.]?reply|do[-_.]?not[-_.]?reply|notification|jobalerts|job-alerts|alerts?@|mailer|"
-    r"bounce|newsletter|@indeedemail\.com|@dice\.com|@ziprecruiter\.com|@glassdoor\.com|"
-    r"@talent\.linkedin\.com|@e\.linkedin\.com|@linkedin\.com)", re.I)
+    r"bounce|newsletter|"
+    r"@(?:[\w-]+\.)*(?:dice|indeedemail|indeed|ziprecruiter|glassdoor|linkedin|monster|"
+    r"careerbuilder)\.com)", re.I)
+
+# A board's PRIVATE-MESSAGE RELAY, which carries mail a human typed, on a domain that also sends blasts.
+# This exists because the subdomain fix above created its own opposite failure (2026-07-29): matching the
+# registrable domain made `user.dice.com` — where Dice delivers recruiter-to-candidate messages — read as
+# automated, so a live IMCS Group recruiter email was put on the archive list and moved out of the inbox.
+# The identical shape ("Garv Bhalla" <o82-927-r0w@user.dice.com>) was correctly held back on 2026-07-22,
+# before the widening. Both failures are real; the domain alone cannot separate them, so the relay host is
+# named and checked FIRST.
+#
+# **Archiving a human's unanswered email is the expensive failure and it is not symmetric with the other
+# one.** A missed alert-blast classification costs a crowded correspondence section for one run; this
+# costs a warm inbound lead, permanently, because the `jobs-triage` label is somewhere Ben does not read
+# (his words, 2026-07-29: *"i don't check the folder, so if you move something fresh into it that i
+# haven't responded to, it is a bad thing"*). Add a host here the moment a board is seen relaying human
+# mail — the cost of a wrong entry is one alert in the inbox.
+_PRIVATE_RELAY = re.compile(r"@(?:[\w-]+\.)*user\.dice\.com", re.I)
+
+# --- The general guard the relay list cannot be ----------------------------------------------------
+# `_PRIVATE_RELAY` above is a named list, and a named list always lags the next board that starts
+# relaying human mail — it was written the day after one had already cost a lead. So nothing is archived
+# without this second, source-agnostic check: does the From: header carry a **person's name**?
+#
+#   "Akshay Srivastava" <gt4-mu0-nd5@user.dice.com>   -> yes, hold it back
+#   "Dice" <noreply@dice.com>                         -> no
+#   "LinkedIn Job Alerts" <jobalerts-noreply@...>     -> no
+#
+# It is a shape test, not a knowledge test: two or three name-like words, none of them a role or brand
+# word, no digits, no punctuation a person's name does not have. That is deliberately crude, and the
+# crudeness points the right way — `"Robert Half" <alerts@roberthalf.com>` reads as a person and gets
+# held. The cost of that is one alert left in an inbox for a day. The cost of the opposite is a warm
+# inbound lead moved into a folder Ben does not read, permanently, which is what happened on 2026-07-29.
+#
+# Held messages are not merely skipped: `archive_list_lines` returns them and the run reports them, so
+# the decision is visible rather than trusted. There is no test pinning the word list below — the owner
+# asked for the behaviour prevented and *visible*, not for an assertion catalogue — but the shape rules
+# and the failure direction are tested.
+_ORG_WORD = re.compile(
+    r"\b(job|jobs|alert|alerts|team|teams|careers?|career|recruit\w*|talent|hiring|hire|staffing|"
+    r"notification|notifications|digest|newsletter|update|updates|support|help|admin|info|no[-\s]?reply|"
+    r"do[-\s]?not[-\s]?reply|mail\w*|inc|llc|ltd|corp|group|agency|partners?|solutions?|services?|"
+    r"technologies|systems|consulting|labs?|network|board|search|via|and|the|at)\b", re.I)
+
+# A person's name: letters, plus the punctuation that genuinely appears in names (O'Neill, Jean-Luc,
+# initials). Anything else — digits, @, brackets, emoji, a bare word — is not what we are looking for.
+_NAME_WORD = re.compile(r"^[A-Za-z][A-Za-z'’.\-]*$")
+
+
+def display_name(sender: str) -> str:
+    """The human-readable part of a From: header, unquoted. `""` when the header is a bare address."""
+    sender = (sender or "").strip()
+    name = sender.split("<")[0].strip() if "<" in sender else ""
+    return name.strip('"\'' " \t")
+
+
+def has_human_display_name(sender: str) -> bool:
+    """Does this From: header name a **person**? The last gate before anything leaves an inbox.
+
+    True for two or three name-shaped words with no organisational vocabulary in them. False for a bare
+    address, a one-word brand, and anything carrying a role or company word. Read the block above this
+    function for why the false positives are the acceptable ones.
+    """
+    name = display_name(sender)
+    if not name or _ORG_WORD.search(name):
+        return False
+    words = name.replace(",", " ").split()
+    # One word is a brand ("Dice", "Wellfound"); four or more is a sentence, not a name.
+    return 2 <= len(words) <= 3 and all(_NAME_WORD.match(w) for w in words)
 
 
 def _is_correspondence(em: dict) -> bool:
     """True = a human wrote to Ben (or he replied); False = an automated job alert.
 
-    Two independent signals, either of which means 'conversation':
-      1. the message is a reply (`In-Reply-To`/`References` present), or
-      2. the sender does not look automated.
+    Three independent signals, any of which means 'conversation':
+      1. the sender is a board's private-message relay (a human typed it), or
+      2. the message is a reply (`In-Reply-To`/`References` present), or
+      3. the sender does not look automated.
+
+    Signal 1 is checked before the automated test on purpose: a relay host sits under a domain that
+    the automated pattern matches, so the order is what makes the carve-out work at all.
     """
+    sender = em.get("sender", "") or ""
+    if _PRIVATE_RELAY.search(sender):
+        return True
     if em.get("is_reply"):
         return True
-    return not _AUTOMATED_SENDER.search(em.get("sender", "") or "")
+    return not _AUTOMATED_SENDER.search(sender)
 
 
 _URL = re.compile(r'https?://[^\s"\'<>)]+')
@@ -204,7 +287,8 @@ def _extract_model():
     path handed out one. Built lazily, inside `_extract_from_email`'s try, so a missing key surfaces
     as the same per-email warning rather than at import.
     """
-    return llm.structured(EmailExtraction, config.model("extract"), max_tokens=_EXTRACT_MAX_TOKENS)
+    return llm.structured(EmailExtraction, config.model("extract"), max_tokens=_EXTRACT_MAX_TOKENS,
+                          role="extract")
 
 
 def _extract_from_email(em: dict) -> list[Job]:
@@ -253,7 +337,7 @@ def _extract_from_email(em: dict) -> list[Job]:
 
     def _mk(**kw) -> Job:
         return Job(email_mid=em.get("mid", ""), from_correspondence=_is_correspondence(em),
-                   email_sender=em.get("sender", ""), **kw)
+                   email_sender=em.get("sender", ""), email_subject=em.get("subject", ""), **kw)
 
     jobs, claimed = [], set()
     for e in extracted:
@@ -304,7 +388,8 @@ _BACKFILL_JD_CHARS = 6000   # enough for the header and the first requirements b
 def _backfill_model():
     """Built once per process and lazily, the shape `prefilter` and the mail extractor both use — so a
     missing key surfaces as a per-URL warning at call time rather than at import."""
-    return llm.structured(ExtractedJob, config.model("extract"), max_tokens=_BACKFILL_MAX_TOKENS)
+    return llm.structured(ExtractedJob, config.model("extract"), max_tokens=_BACKFILL_MAX_TOKENS,
+                          role="extract")
 
 
 def backfill(job: Job, *, default_platform: str = "paste") -> Job:
@@ -477,11 +562,45 @@ def _report_unclassified(emails: list[dict]) -> None:
 # NOTE: the tool does NOT move Gmail mail itself. Apple Mail's AppleScript `move` can't reliably archive
 # a Gmail message (it dual-labels — adds the target label but leaves INBOX; confirmed live + widely
 # documented). Instead it writes an archive list (below) and a Claude session moves them via the Gmail
-# connector (add label, remove INBOX). See docs/operating/triage-operating.md → "Archiving".
+# connector (add label, remove INBOX). See docs/operating/triage.md → "Archiving".
 
 
-def archive_list_lines(all_extracted: list[Job], resolved_keys: set[str], label: str, day: str) -> tuple[list[str], int]:
-    """Lines for data/runs/archive-<date>.txt: emails whose EVERY extracted job is resolved.
+@dataclass
+class ArchivePlan:
+    """What this run proposes to do to a mailbox, and what it refused to do — both, in one object.
+
+    Returned instead of a bare `(lines, count)` because an archive that is only *counted* cannot be
+    checked. Two facts have to reach the apply doc, which is the only thing the owner reads: which
+    emails were moved (`rows`, one per message, carrying sender and subject) and which were held back
+    for a human to look at (`held`). See `triage/worklist.py` for the rendering.
+    """
+    lines: list[str] = field(default_factory=list)       # the archive-<date>.txt file, verbatim
+    rows: list[dict] = field(default_factory=list)       # {mid, sender, subject, n_jobs, context}
+    held: list[dict] = field(default_factory=list)       # same shape + `reason`, NOT archived
+
+    @property
+    def count(self) -> int:
+        return len(self.rows)
+
+
+def _mail_row(mid: str, group: list[Job], reason: str = "") -> dict:
+    """One email, described the way a person recognises their own mail: who it is from and what it says.
+
+    The list used to carry a bare message-id plus a job count, which is unauditable — on 2026-07-29 the
+    apply doc's archive table had to be assembled by hand from a subagent's mailbox report, which does
+    not scale and does not survive a forgetful session.
+    """
+    g = group[0]
+    row = {"mid": mid, "sender": g.email_sender, "subject": g.email_subject, "n_jobs": len(group),
+           "context": f"{g.company or '?'} — {g.title or '?'}"}
+    if reason:
+        row["reason"] = reason
+    return row
+
+
+def archive_list_lines(all_extracted: list[Job], resolved_keys: set[str], label: str,
+                       day: str) -> ArchivePlan:
+    """Emails whose EVERY extracted job is resolved — minus anything a human appears to have written.
 
     Works off the FULL pre-dedup extraction and a set of resolved DEDUP KEYS (not ids). A job that was a
     duplicate of another (same dedup key) is resolved once its twin is analyzed — so an email whose only
@@ -490,7 +609,14 @@ def archive_list_lines(all_extracted: list[Job], resolved_keys: set[str], label:
     email with any un-resolved job is not 'done'. Pure/testable — no I/O.
 
     A job from a non-mail channel has no `email_mid` and is skipped by the first line of the loop, which
-    is why paste- and board-sourced jobs need no special handling here."""
+    is why paste- and board-sourced jobs need no special handling here.
+
+    TWO independent guards stand between a resolved email and the archive list, and they are independent
+    on purpose: `from_correspondence`, which is a classification decided at extraction time, and
+    `has_human_display_name`, which is a shape test on the From: header applied *here*, at the last
+    moment before anything is proposed for removal. The second one exists because the first was correct
+    and still let a live recruiter through — see `_PRIVATE_RELAY` and `has_human_display_name`.
+    """
     by_mid: dict[str, list[Job]] = {}
     skipped_corr = 0
     for j in all_extracted:
@@ -506,17 +632,35 @@ def archive_list_lines(all_extracted: list[Job], resolved_keys: set[str], label:
     if skipped_corr:
         log.info("archive: held back %d job(s) from human correspondence — never auto-archived",
                  skipped_corr)
+
     done = {mid: group for mid, group in by_mid.items()
             if all(_dedup_key(j) in resolved_keys for j in group)}
-    if not done:
-        return [], 0
-    lines = [f"# ARCHIVE LIST — move these {len(done)} emails out of INBOX into '{label}'.",
-             f"# A Claude session archives them: for each, search rfc822msgid:<id>, add '{label}', remove INBOX.",
-             f"# Format: <message-id> TAB label TAB context.  Generated {day}."]
+
+    # The last gate. Anything whose sender names a person is diverted to `held` — never dropped silently,
+    # because a guard nobody can see is indistinguishable from a guard that stopped working.
+    plan = ArchivePlan()
+    archivable = {}
     for mid, group in done.items():
-        g = group[0]
-        lines.append(f"{mid}\t{label}\t{len(group)} job(s): {g.company or '?'} — {g.title or '?'}")
-    return lines, len(done)
+        sender = group[0].email_sender
+        if has_human_display_name(sender):
+            plan.held.append(_mail_row(mid, group, reason=f"sender names a person: {display_name(sender)}"))
+        else:
+            archivable[mid] = group
+    if plan.held:
+        log.warning("archive: HELD BACK %d email(s) whose sender names a person — review them in the "
+                    "worklist before moving anything", len(plan.held))
+
+    if not archivable:
+        return plan
+    plan.rows = [_mail_row(mid, group) for mid, group in archivable.items()]
+    plan.lines = [f"# ARCHIVE LIST — move these {len(archivable)} emails out of INBOX into '{label}'.",
+                  f"# A Claude session archives them: for each, search rfc822msgid:<id>, add '{label}', "
+                  f"remove INBOX.",
+                  f"# Format: <message-id> TAB label TAB from TAB subject TAB context.  Generated {day}.",
+                  f"# Every line is reproduced in the apply doc — that is the audit trail, not this file."]
+    plan.lines += [f"{r['mid']}\t{label}\t{r['sender'] or '?'}\t{r['subject'] or '(no subject)'}\t"
+                   f"{r['n_jobs']} job(s): {r['context']}" for r in plan.rows]
+    return plan
 
 
 def _dedup_key(job: Job) -> str:

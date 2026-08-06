@@ -6,7 +6,7 @@
 
 
 > **Status: BUILT ✅ (2026-07-04).** This is the design record / rationale. The tool is implemented and
-> live-validated. **To operate or modify it, read [`triage-operating.md`](triage-operating.md)** — the
+> live-validated. **To operate or modify it, read [`triage.md`](../operating/triage.md)** — the
 > as-built operator's guide (how to run, file map, gotchas, tuning). This plan explains *why*; that doc
 > explains *how it actually works now*.
 
@@ -237,7 +237,7 @@ rubric or accept a no-op if short.)
 ## 9. Output — `worklist-YYYY-MM-DD.md` (markdown, not a spreadsheet)
 
 > As-built: the machine worklist lands in `data/runs/`; the curated doc Ben works from is `matches/<date>.md`.
-> See `triage-operating.md`.
+> See `triage.md`.
 
 Ben reads text to pick the top 3–5; the doc is the product.
 
@@ -350,7 +350,8 @@ Captured so nothing is lost; none are in v1.
 
 - **`resume_bullets` generation** — Files API + PDF input (feed Ben's CV) so the analyzer drafts tailored
   bullets per role. Ben's stated optional expansion.
-- **Braintrust source** — add once Ben signs up (self-apply listings, SECONDARY).
+- ~~**Braintrust source**~~ — dropped 2026-07-27, will not be built. See `docs/knowledge-base/personal/tailoring-playbook.md`
+  under *Retired channels*.
 - **Scion + other agency adapters** — if a source proves high-yield.
 - **Bright Data LinkedIn Jobs API** (5k free/mo) — reliable-tier upgrade if the free guest endpoint flakes.
 - **Hard-case JD-fetch fallback agent** — a small bounded tool-use agent for unknown sites the deterministic
@@ -395,7 +396,7 @@ to do the final acceptance test + set up the inbound job-alert emails.
 2. **Analysis sanity:** a remote React contract JD → PRIMARY / high fit; a .NET-primary onsite JD →
    SKIP/low; an FDE "50% travel" role → downranked with a travel red flag.
 3. **Ingestion:** last-3-day Gmail read yields job links; a recruiter email with an inline JD (like
-   `profile/notes/email-jobs/college-board.md`) is captured even with no scrapeable link.
+   `docs/knowledge-base/personal/email-jobs/college-board.md`) is captured even with no scrapeable link.
 4. **Dedup:** re-run skips already-seen; an id added to `skiplist.md` disappears next run.
 5. **Output:** `worklist.md` has all four sections (focus / ranked rest / rejected / couldn't-fetch), with
    ids present to paste into `skiplist.md`.

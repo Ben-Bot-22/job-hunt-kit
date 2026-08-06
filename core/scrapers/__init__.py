@@ -14,6 +14,14 @@ matching. The per-source counts at the call site are the only detector. Measured
 Insight Global 87, TEKsystems 78, Motion 27, Mondo 15, Apex 3, KORE1 2. Both single digits were
 investigated on 2026-07-24 and they were two different things.
 
+**Read the RAW scrape count, not the in-window one — they are different numbers and only the raw one
+says anything about board health** (2026-07-27). The run summary prints postings *inside the run's
+date window*, so a short window makes a healthy board look dead. On 2026-07-27 the raw scrapes were
+Insight Global 442, Apex 493, Motion 268, TEKsystems 78, Mondo 13, KORE1 6, Scion 14 — while the
+in-window line for the same run read `motion 9` and `scion 0`. Motion's "27" above and its "3" on an
+earlier run were both window artifacts of one healthy board. A source is rot-suspect when its *raw*
+count collapses; an in-window zero on a 3-day window is usually just a quiet week.
+
 Apex was rot: **re-measured live 2026-07-24 at 150** (capped; the board held 2,604 postings, 488 of
 them dev-slug). Its 3 was the silent-zero failure doing exactly what this docstring warns about —
 `?page=N` needed a session cookie the scraper never sent, so the loop refetched page one, saw no new

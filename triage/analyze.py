@@ -48,23 +48,68 @@ def _system() -> str:
         "roles — treat those as IN-LANE, not out-of-lane.\n\n"
         "CHANNEL TIER (propose your best guess; a deterministic step finalizes it):\n"
         "  PRIMARY = agency staffing contract, remote OR onsite (Ben is relocation-open) — the fastest-fill lane.\n"
-        "  SECONDARY = contract platform (Braintrust/Gun.io/Upwork/Toptal).\n"
+        "  SECONDARY = contract platform (Gun.io/Upwork/Toptal).\n"
         "  OPPORTUNISTIC = everything else (strong perm, AI-native standout, startup).\n\n"
+        # Intensity dropped from this list 2026-07-30: the INTENSITY block below calls it "SEPARATE
+        # from fit" and the goal profile says it no longer sets the verdict, so naming it as a scoring
+        # input here was the same prompt arguing with itself. It leaves the ranked list instead.
         "VERDICT + SCORE (0-100): location does NOT gate the score — remote and onsite are equal; rank on "
-        "role shape, stack, rate, and intensity.\n"
-        "  STRONG_FIT (80-95) = contract/CTH + in-lane + intensity 1-3, AND an engineering IC role "
-        "with no mandatory-tech gap, no 10+yr bar, and a known/credible rate — whether remote OR onsite. The "
+        "role shape, stack, and rate. Intensity is scored separately and does NOT move this number.\n"
+        # Two conditions removed here on 2026-07-30, because the rubric injected directly above this
+        # line had already retired both and the model reads BOTH copies. (1) "a known/credible rate" —
+        # UNDISCLOSED RATE says the cap is REMOVED; only 18% of postings carry a real figure, so
+        # requiring one demoted four jobs in five for a field we fail to scrape. (2) "intensity 1-3" —
+        # the rubric says plainly that intensity no longer sets the VERDICT; it sets `held_back_reason`
+        # and the job leaves the ranked list entirely, which is a bigger price than one bucket, not a
+        # smaller one. Charging it here as well demoted the job twice for one thing.
+        "  STRONG_FIT (80-95) = contract/CTH + in-lane, AND an engineering IC role "
+        "with no mandatory-tech gap and no 10+yr bar — whether remote OR onsite. The "
         "apply-first tier. If any hard-gate in the goal profile fires (non-eng role shape, mandatory-tech gap, "
         "10+yr bar), cap at LOW_FIT — a 'vibe coding' keyword match never lifts a disqualified role here.\n"
-        "  FIT (60-79) = missing one top factor (permanent / adjacent-stretch / intensity 4-5 / rate unknown).\n"
+        # Intensity and rate-unknown both used to land a job here, i.e. both cost exactly one verdict
+        # bucket. That priced work-life balance — priority #2 — the same as a MISSING FIELD, and the
+        # field is missing on 73% of postings. Intensity now sets `held_back_reason` instead (the job
+        # leaves the ranked list entirely) and an unposted rate costs nothing. 2026-07-30.
+        "  FIT (60-79) = missing one top factor (permanent / adjacent-stretch).\n"
         "  LOW_FIT (40-59) = in-lane but sub-threshold pay, or an adjacent-stretch with several soft misses. "
         "Visible, deprioritized. Do NOT land a role here for being onsite — onsite is not a demerit.\n"
-        "  SKIP (<40) = a HARD FILTER fails only (non-US; posted contract rate clearly < $50/hr; primary stack "
+        # $40, not $50, because the goal profile above says $40 and it is authoritative — $40-50/hr is a
+        # demotion there, never a skip, and this line was silently hard-filtering that whole band.
+        "  SKIP (<40) = a HARD FILTER fails only (non-US; posted contract rate clearly < $40/hr; primary stack "
         ".NET/Java/native-mobile; requires active clearance). NEVER skip for perm/intensity/cadence alone.\n\n"
         "INTENSITY (1-5, inferred, SEPARATE from fit): 1 laid-back, 3 moderate, 5 startup-velocity/on-call/"
-        "always-on. Heavy travel (50%+) or FDE-style = high intensity + a red flag.\n\n"
-        "RED FLAGS: call out heavy travel (50%+)/on-call/always-on, vague or sub-$50/hr rate, clearance, "
-        "body-shop/generic-vendor signals, or primary stack outside his lane. A fixed onsite location or a "
+        "always-on.\n"
+        "  Score it from the INTENSITY TELLS list in the goal profile and DO NOT default to 3 — 78% of "
+        "1,399 scored jobs came back a 3, which is the model shrugging rather than judging. When you score "
+        "4 or 5, QUOTE the phrase from the JD you keyed on, verbatim, as a red flag: intensity is inferred "
+        "from prose, so the quote is the only thing that lets the reader check you.\n"
+        # 2026-08-04. A 4-5 used to set `held_back_reason: intensity` and remove the job. On 2026-08-03
+        # that hid six roles for on-call duty, a 24/7 rotation, incident response, 20-30% travel and
+        # "move fast, deploy daily" — two of them the joint-highest scores of the run. Ben: "a job is a
+        # job and i will travel… you should not skip them. you should just rank them lower and name the
+        # suspect wording." So a 4-5 now SORTS the job down and puts the quote on its line.
+        "  A 4 or 5 does NOT remove the job and does NOT cap the verdict — it ranks the job lower and "
+        "shows your quote. On-call and pager rotations, 24/7 uptime duty, incident response, cross-team "
+        "ownership, sprints and deadlines are ordinary conditions of employment: score them, quote "
+        "them, never refuse on them. Travel is the one with a number, and THE GOAL PROFILE ABOVE STATES "
+        "IT — read the threshold from there rather than assuming one.\n\n"
+        "HELD_BACK_REASON (one token from a FIXED vocabulary, or \"\"): the apply doc GROUPS by this "
+        "string, so never write free text and never invent a value — that silently drops the job out of "
+        "its group. Only TWO tokens are about hours, and both are deliberately hard to earn: `travel` "
+        "when the posting STATES a percentage above the goal profile's threshold, and `intensity` only "
+        "for a posting claiming the whole person — \"passion, not counting hours\", \"we work hard "
+        "here\", an employer whose own work-life rating is bottom-quartile, or a loop promising an offer "
+        "within a week. If it is not that bad, leave this \"\" and let the intensity score do the "
+        "ranking. Otherwise use the token naming the gate that "
+        # The whole vocabulary is spelled here as ONE pipe-delimited run, `intensity` included even
+        # though the sentence above already named it. `core/test_models.py` parses this run and
+        # compares it token-for-token against the schema description and `profile/rubric.md`; a token
+        # that hides in prose is a token the drift test cannot see. 2026-07-30.
+        "fired. The FULL vocabulary, and nothing outside it: "
+        "intensity | travel | rate | stack-gap | role-shape | years-bar | non-us | clearance | no-content. "
+        "Leave it \"\" when nothing was held back.\n\n"
+        "RED FLAGS: call out travel over 40%, on-call/always-on, vague or sub-$50/hr rate, clearance, "
+        "a vague vendor posting with no named client and no rate, or primary stack outside his lane. A fixed onsite location or a "
         "one-time relocation is NOT a red flag.\n"
         "RESUME_KEYWORDS: the terms he should tailor his resume/application toward for THIS role.\n"
         "Be honest and specific in `why`, `role_summary`, and `meets_goals` — the user reads these to decide."
@@ -91,7 +136,8 @@ def _analyze_model():
     `python -m triage --help` must not need a key.
     """
     return llm.structured(Analysis, config.model("analyze"), max_tokens=_MAX_TOKENS,
-                          thinking=llm.THINKING_ADAPTIVE)  # Opus 4.8: default effort is already 'high'
+                          thinking=llm.THINKING_ADAPTIVE,  # Opus 4.8: default effort is already 'high'
+                          role="analyze")
 
 
 def user_message(job: Job, precedents: str = "") -> str:
@@ -115,6 +161,14 @@ def user_message(job: Job, precedents: str = "") -> str:
 
 
 def analyze(job: Job, precedents: str | None = None) -> Analysis:
+    """Judge `job` and return the Analysis. Never raises — a failed call returns a visible SKIP stub.
+
+    It also stamps `job.analysis_errored`, which is the difference between "the model said SKIP" and
+    "we never got a judgment". That flag decides whether the job is recorded in `seen.json`, i.e.
+    whether it is ever seen again, so it is set HERE — the one place that knows the call failed — and
+    cleared on success, because a job re-scored through `--merge` has stopped being errored. See
+    `Job.analysis_errored` for the incident that made the distinction necessary.
+    """
     # Retrieval is done here rather than by the caller so every scoring path — phase 1 and the
     # phase-3 re-analysis with the browser-fetched JD — gets the same memory without remembering to.
     user = user_message(job, precedent.for_job(job) if precedents is None else precedents)
@@ -128,9 +182,11 @@ def analyze(job: Job, precedents: str | None = None) -> Analysis:
         ])
         if resp is None:   # belt and braces: the wrapper *raises* where `messages.parse` gave None
             raise ValueError("no parsed output")
+        job.analysis_errored = False
         return resp
     except Exception as e:  # noqa: BLE001 — keep the job in the list; surface the error as its reason
         log.warning("analysis failed for %s @ %s: %s", job.title, job.company, e)
+        job.analysis_errored = True
         return Analysis(
             tier="OPPORTUNISTIC", fit_score=0, intensity=3, verdict="SKIP",
             why=f"analysis_error: {str(e)[:120]}", role_summary="", meets_goals="",

@@ -5,7 +5,7 @@ description: Sync Ben's applied-jobs Google Sheet into the triage dedup cache (a
 
 Pull Ben's applied-jobs Google Sheet, normalize its messy rows, and write them into the triage dedup cache
 (`data/corpus/applied.json`) so the ranker never re-surfaces a job he has already applied to. Full
-reference: `docs/operating/triage-applied-sync.md`.
+reference: `docs/operating/triage.md § the applied-sheet sync`.
 
 The sheet is free-form and inconsistent — company is often blank, the **title lands in whichever column
 Ben pasted into** (`job-id` OR `description`), and identity is sometimes only inferable from the link

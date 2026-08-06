@@ -94,100 +94,12 @@ def test_keeps_light_travel():
     assert hard_skip(_job(jd="Light quarterly travel, about 10% travel.")) is None
 
 
-# --- the body-shop skip ----------------------------------------------------------------------------
-#
-# The two directions here are NOT symmetric, and the asymmetry is the whole design. A missed body shop
-# costs Ben one wasted read. A rule that cannot tell a body shop from a staffing agency costs him his
-# PRIMARY tier — agency reqs are his fastest fills, and 41 of the 1,134-job corpus come from 28 named
-# agencies. Every string below is real, quoted from `data/corpus/state-*.json`, and the KEEP cases are
-# the postings that a rule keyed on "staffing firm", "visa", or "in-person interview" would have killed.
-
-def test_skips_any_visa():
-    """Atem Corp: 'Fulltime Any Visa'. Nobody but a shop placing bodies writes that line."""
-    assert hard_skip(_job("Python Developer", "Job Title: Python Developer Dallas TX Fulltime Any Visa"))
-
-
-def test_skips_any_workable_visa():
-    """Enterprise Mobility Inc: 'Visa: Any workable visa.' — a vendor req under a recognizable name."""
-    assert hard_skip(_job(jd="Bachelor's in Computer Science is minimum required. Visa: Any workable visa."))
-
-
-def test_skips_ead_category_shopping():
-    """Quantum Technologies: a work-auth line dealing in EAD categories, plus a withheld client."""
-    jd = ("Bill Rate: $80-$90 Project Duration: 24 Months+ Client: To Be Discussed Later "
-          "Work Authorization: US-Citizen, H-1B, OPT-EAD, GC-EAD")
-    assert hard_skip(_job("Senior AI Full Stack Developer", jd))
-
-
-def test_skips_ead_categories_even_when_excluded():
-    """MPower Plus: 'no OPT, GC_EAD and CPT'. The vocabulary is the tell, not its polarity."""
-    assert hard_skip(_job(jd="Job Type: Full-time( no OPT, GC_EAD and CPT) Skill Requirements: TypeScript"))
-
-
-def test_skips_local_drivers_licence_only():
-    """The spec's named tell. No corpus hit yet — pinned so the pattern can't rot unnoticed."""
-    assert hard_skip(_job(jd="Only local candidates with a valid DL. DL copy is a must at submission."))
-
-
-def test_skips_two_weak_tells_together():
-    """VRK IT Vision: 'Mode of Interview', 'LinkedIn profile is a must and should match the resume',
-    'Need a senior Resource with 13+ Years'. No single one of those is enough; three are."""
-    jd = ("Duration:- 21 months Mode of Interview:- Teams Meeting NOTE:- A LinkedIn profile is a must "
-          "and should match the resume. Need a senior Resource with 13+ Years of over all experien")
-    assert hard_skip(_job("AI Engineer", jd))
-
-
-# --- and must NOT skip (the expensive direction) ----------------------------------------------------
-
-def test_keeps_a_named_agency_posting_a_named_client_req():
-    """Genesis10, fit 90 — the calibration rubric's STRONG_FIT bar, and an agency req.
-
-    It describes its client generically ('a Major Financial Institution'), which is exactly what the
-    'generic vendor with no client named' tell must not be allowed to mean.
-    """
-    jd = ("Genesis10 is currently seeking a Senior Full Stack Developer - Remote position with a Major "
-          "Financial Institution located in Cleveland, OH. This is a 5+ month contract opportunity.")
-    assert hard_skip(_job("Senior Full Stack Developer - Remote", jd)) is None
-
-
-def test_keeps_a_staffing_firm_stating_a_citizenship_requirement():
-    """DKKD Staffing: 'Must be US Citizen or Legal/Permanent Resident Green Card (no C2C)'.
-
-    Work-authorization language and the letters 'C2C' are not tells. 20 corpus postings mention green
-    cards and 17 mention corp-to-corp; keying on either would take out real agencies.
-    """
-    jd = ("CITIZENSHIP: Must be US Citizen or Legal/Permanent Resident Green Card (no C2C) "
-          "TITLE: Staff Engineer, AI & Agentic Development")
-    assert hard_skip(_job("Staff Engineer, AI & Agentic Development", jd)) is None
-
-
-def test_keeps_a_direct_employer_refusing_to_sponsor():
-    """AllOne Health: 'This role does not offer H-1B, OPT, or other employer-sponsored work visas.'
-
-    44 corpus postings name H-1B or OPT and nearly all are direct employers saying NO. Bare visa
-    acronyms are therefore the opposite of a body-shop tell, which is why only the EAD forms match.
-    """
-    jd = ("Must be authorized to work in the US without employer-sponsored work authorization. This role "
-          "does not offer H-1B, OPT, or other employer-sponsored work visas.")
-    assert hard_skip(_job("Senior Engineer", jd)) is None
-
-
-def test_keeps_an_employer_with_an_in_person_interview():
-    """Versant Media, Acuity Insurance and Allocate all state one. None is a body shop.
-
-    In-person-only was named as a tell in the spec; the corpus narrowed it to a corroborating one.
-    """
-    jd = ("As part of our selection process, external candidates may be required to attend an in-person "
-          "interview with a VERSANT Media employee at one of our locations prior to a hiring decision.")
-    assert hard_skip(_job("Senior Full Stack Engineer", jd)) is None
-
-
-def test_keeps_a_recruiter_asking_for_a_resume():
-    """Proven Recruiting: 'Please email your resume to ...'. One weak tell alone never skips."""
-    jd = ("Please email your resume to mstramel@provenrecruiting.com if you're excited to explore this "
-          "opportunity with our client. Share your updated resume when ready.")
-    assert hard_skip(_job("Full Stack Engineer", jd)) is None
-
+# The body-shop skip lived here until 2026-07-30 — 6 skip-cases and 5 must-not-skip cases, removed
+# with the rule. It keyed on how a posting was *written* (any-visa lines, EAD-category shopping,
+# withheld clients) and was cut at Ben's instruction: over 2,185 analyzed jobs it labelled ~1%, and
+# almost all of those were already dying on an independent rule — out-of-lane stack, non-US, or
+# location. The regexes were a maintenance surface pinned to 2026-07 vendor boilerplate, guarding a
+# decision the other rules already made. See docs/knowledge-base/decision-body-shop-skip-or-cap.md.
 
 # --- Gate 2: the Sonnet screen, offline ------------------------------------------------------------
 

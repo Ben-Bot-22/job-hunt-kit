@@ -112,6 +112,14 @@ class Analysis(BaseModel):
     fit_score: int = Field(ge=0, le=100)
     intensity: int = Field(ge=1, le=5)
     verdict: Verdict
+    # A FIXED vocabulary, and that is the whole point of the field. The apply doc groups rejections by
+    # it and renders a "held back" section off it, and you cannot group free text — `why` is one honest
+    # sentence per job, which is exactly what makes it ungroupable. The empty string means "not held
+    # back", so the default is the common case and a scorer that ignores the field changes nothing.
+    # Vocabulary is `profile/rubric.md` §THREE TIERS OF "NO"; reasoning in
+    # `docs/knowledge-base/decision-work-life-balance-priority.md` (2026-07-30).
+    held_back_reason: str = Field(default="", description=
+        "intensity | travel | rate | stack-gap | role-shape | years-bar | non-us | clearance | no-content | ''")
     why: str = Field(description="One line — the ranked-list reason.")
     role_summary: str = Field(description="What the job actually is, so you needn't reopen the JD.")
     meets_goals: str = Field(description="How it maps to remote/contract/rate/intensity/stack, and misses.")
@@ -142,11 +150,30 @@ class Job:
     fetch_error: str = ""         # populated when the link couldn't be fetched (surfaced for manual review)
     email_mid: str = ""           # Message-ID of the source email — the stable handle used to archive it
     email_sender: str = ""        # raw From: of that email (shown for correspondence, so Ben knows who)
+    email_subject: str = ""       # Subject: of that email. Carried for ONE reason: the archive list is a
+                                  # report of what was touched in someone's mailbox, and a bare
+                                  # message-id is not something a human can recognise their own mail in.
     from_correspondence: bool = False  # a human wrote this, not a job alert — NEVER archive, don't mix
                                        # into fresh picks. See channels.common._is_correspondence.
     analysis: Optional[Analysis] = None
     final_tier: str = ""          # deterministic tier from rank.finalize_tier (overrides the model's guess)
     prefiltered: bool = False     # True => screened out cheaply; never reached the Opus analyzer
+    # True => the analyzer RAISED and `analysis` is the stub standing in for a judgment we never got.
+    #
+    # This is the absence of a judgment, not a judgment, and the pipeline must be able to tell the two
+    # apart: a scored job is recorded in `seen.json`, and a seen job never surfaces again. On 2026-07-29
+    # a monthly spend cap tripped mid-run, 134 jobs were stubbed at `fit_score=0, verdict=SKIP` and
+    # became permanently invisible; recovery meant deleting 274 keys from seen.json by hand.
+    #
+    # It lives on the Job and NOT on `Analysis` because `Analysis` is also the structured-output schema
+    # sent to the scorer — a field there is a field the model fills in, and whether the call succeeded is
+    # the one thing the model cannot know. For the same reason it is not inferred from `analysis.why`:
+    # a string prefix is not a contract.
+    #
+    # A PREFILTERED job also carries `fit_score=0, verdict=SKIP` and must NOT set this: it was
+    # legitimately judged by the cheap gate, and un-seeing it means re-fetching and re-screening it on
+    # every run forever. Only `triage/analyze.py`'s except branch produces an errored job.
+    analysis_errored: bool = False
     liveness: str = ""            # open | closed | unknown ("" = not checked) — see liveness.py
     liveness_detail: str = ""     # the evidence: the marker matched, HTTP code, or why it's unknown
     # Postings semantic dedup merged INTO this one, each {id, company, title, link, similarity,
@@ -174,13 +201,14 @@ class Job:
 
 # ---- serialization (Phase 1 writes state; Phase 3 reloads it to merge browser-fetched JDs) ----
 _JOB_FIELDS = ["link", "company", "title", "source_platform", "posted_hint", "email_jd_text",
-               "fetched_jd", "jd_source", "fetch_error", "email_mid", "email_sender", "final_tier",
-               "liveness", "liveness_detail"]
+               "fetched_jd", "jd_source", "fetch_error", "email_mid", "email_sender", "email_subject",
+               "final_tier", "liveness", "liveness_detail"]
 
 
 def job_to_dict(j: "Job") -> dict:
     d = {k: getattr(j, k) for k in _JOB_FIELDS}
     d["prefiltered"] = j.prefiltered      # bool — kept out of _JOB_FIELDS' string coercion below
+    d["analysis_errored"] = j.analysis_errored
     d["from_correspondence"] = j.from_correspondence
     d["duplicates"] = list(j.duplicates)
     d["analysis"] = j.analysis.model_dump() if j.analysis else None
@@ -192,6 +220,7 @@ def job_from_dict(d: dict) -> "Job":
     for k in _JOB_FIELDS:
         setattr(j, k, d.get(k, "") or "")
     j.prefiltered = bool(d.get("prefiltered", False))
+    j.analysis_errored = bool(d.get("analysis_errored", False))
     j.from_correspondence = bool(d.get("from_correspondence", False))
     j.duplicates = list(d.get("duplicates") or [])
     a = d.get("analysis")
@@ -199,7 +228,21 @@ def job_from_dict(d: dict) -> "Job":
     return j
 
 
+# Hosts the browser cannot rescue, so queueing them only spends a round-trip and inflates the
+# couldn't-fetch count with things that were never fetchable (2026-07-27).
+#
+# `elinks.dice.com` is a TRACKING WRAPPER around Dice marketing mail, not a posting link. This was first
+# read as staleness — "7 expired to error pages", 2026-07-23 — and that was wrong: on 2026-07-27 one of
+# them resolved perfectly cleanly to Dice's own LinkedIn *company page*. They come from "your profile was
+# viewed" and job-alert blasts. Across two runs, 40 of them yielded zero JDs. They stay in `_JOB_HOSTS`
+# (the link is still a signal that an email is job-related) but they never reach the browser queue.
+_BROWSER_UNFETCHABLE = ("elinks.dice.com", "my.greenhouse.io/dashboard")
+
+
 def needs_browser_fetch(j: "Job") -> bool:
     """A promising job whose full JD we couldn't scrape — worth pulling through the browser (Tier 2).
-    Only non-SKIP items (no point rendering a hard-filtered one) that have a link but no full JD."""
-    return bool(j.link) and j.jd_source != "full" and j.analysis is not None and j.analysis.verdict != "SKIP"
+    Only non-SKIP items (no point rendering a hard-filtered one) that have a link but no full JD,
+    and only where the browser can actually reach a JD — see `_BROWSER_UNFETCHABLE`."""
+    if not j.link or any(h in j.link for h in _BROWSER_UNFETCHABLE):
+        return False
+    return j.jd_source != "full" and j.analysis is not None and j.analysis.verdict != "SKIP"

@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "The frozen case set for `python -m cv.run_eval`. A FILE and not a glob over applications/, because",
+    "a glob would silently change the case set every time a résumé is written — two runs would look",
+    "comparable and would not be.",
+    "",
+    "Two cases, chosen to sit at opposite ends rather than to be a sample. Apex is a current tailored",
+    "output that went through the review loop; College Board is a real résumé really sent, written",
+    "before the current rules and still carrying two retracted claims. A test set of two good documents",
+    "would tell us almost nothing — the weak anchor is what makes a score movement legible.",
+    "",
+    "Adding a case is one line. Prefer adding a SHAPE that is missing (an AI-heavy req, a backend req)",
+    "over adding another of something already here. Never remove a case to make a number look better."
+  ],
+  "cases": [
+    "applications/2026-07-28_apex-systems_software-developer",
+    "applications/archive/2026-06-25_college-board_senior-full-stack-engineer"
+  ]
+}

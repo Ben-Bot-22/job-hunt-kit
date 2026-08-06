@@ -212,8 +212,8 @@ def test_an_email_that_failed_extraction_is_never_archived(fake):
     fake(_Fake(raises=OutputParserException("did not validate")))
     jobs = ingest._extract_from_email(_email(sender="jobalerts-noreply@linkedin.com"))
     assert jobs, "the links must survive the refusal"
-    lines, n = ingest.archive_list_lines(jobs, resolved_keys=set(), label="Processed", day="2026-07-22")
-    assert (lines, n) == ([], 0)
+    plan = ingest.archive_list_lines(jobs, resolved_keys=set(), label="Processed", day="2026-07-22")
+    assert (plan.lines, plan.count, plan.held) == ([], 0, [])
 
 
 # --- classify_urls: the three buckets, and the Indeed collapse -------------------------------------

@@ -129,7 +129,6 @@ break it.
 
 - Non-goals as a list, for a stranger deciding in 90 seconds — [`README.md`](../README.md#what-this-is-not)
 - What an agent may edit, and why the boundary is a file — [`AGENTS.md`](../AGENTS.md)
-- The daily run, end to end — [`docs/operating/triage-operating.md`](operating/triage-operating.md)
+- The daily run, end to end — [`docs/operating/triage.md`](operating/triage.md)
 - Running it unattended, and what cannot be — [`docs/operating/scheduling.md`](operating/scheduling.md)
-- The five workflows, and your equivalents of them — [`docs/operating/workflows.md`](operating/workflows.md)
-- Findings that decided a design — [`docs/research/`](research/)
+- Findings that decided a design — [`docs/knowledge-base/`](research/)

@@ -80,7 +80,8 @@ gap in the report, never a failed run.
 ## 1. Model providers — the one key you actually need
 
 Every model call in the repo goes through `core/llm.py`. The vendor is `llm.provider` in
-`config/settings.yaml`; the key goes in `.env`; the model ids are `models:` in the same settings file.
+`config/settings.yaml`; the key goes in `.env`; the model ids default to `core.settings.DEFAULT_MODELS` and a
+`models:` block in that settings file overrides them per role.
 
 | provider | status | key | package | cost |
 |---|---|---|---|---|
@@ -88,6 +89,16 @@ Every model call in the repo goes through `core/llm.py`. The vendor is `llm.prov
 | `openai` | untested, registered | `OPENAI_API_KEY` | `langchain-openai` | as above, on their pricing |
 | `google` | untested, registered | `GOOGLE_API_KEY` | `langchain-google-genai` | as above |
 | `ollama` | untested, registered | none — set `llm.base_url` | `langchain-ollama` | free; a local model, so no job data leaves the machine |
+| `claude_cli` | **tested** — structured output and prompt-cache reuse both measured 2026-08-03 | none — the CLI's own stored login | `claude` on PATH, signed in | a Claude subscription instead of a bill. Costs a **rate limit**, not money |
+
+`claude_cli` is the odd row: it is reached through `llm.cli_roles`, not `llm.provider`, so it applies to
+*named model roles* while everything else keeps using the provider above. It shells out to `claude -p
+--json-schema`, which is the same native structured output `method="json_schema"` reaches, and the
+system-prompt cache still hits across separate invocations — so the rubric is not re-billed per job.
+The failure modes are different in kind from an API key's: no key to be absent, but the binary can be
+missing (a `ConfigurationError` naming `cli_roles`), the login can expire, and a busy morning run
+competes with your own interactive Claude Code sessions for the same limit. That last one is why only
+`analyze` is routed by default — see the comment on `cli_roles` in `config/settings.yaml`.
 
 **Absent:** `ConfigurationError` naming the provider, its environment variable, and the providers whose
 keys you do have. A missing *package* is the same error class with `pip install langchain-openai` in it,
@@ -290,14 +301,17 @@ Costs are measured on this machine against a ~350-job window and a 1,300-record 
 | `JOBSDB_CONFIG_HOME=config/example python -m triage --paste <url>` | a real run against the fictional seeker | still writes to the real `data/` — see `data-map.md` §4 | a provider key |
 | `pytest -q` | ~6 s, 636 tests | nothing | **offline, no key** |
 
-The five workflows — `/setup`, `/job-triage`, `/research-company`, `/sync-applied`, `/tailor-cv` — sit
-on top of those commands and are prose an agent reads. `docs/operating/workflows.md` maps each one's
-assumptions onto yours.
+The nine workflows — `/setup`, `/job-triage`, `/research-company`, `/sync-applied`, `/evaluate-role`,
+`/cover-letter`, `/tailor-cv`, `/tailor-cv-batch`, `/publish` — sit on top of those commands and are
+prose an agent reads. Two of them (`/evaluate-role`, `/cover-letter`) have no Python underneath at all.
+The README's *Which agent runs the workflows* section maps each one's assumptions onto yours.
 
 ---
 
 ## See also
 
+* `docs/operating/systems.md` — **which system am I in, and what is its anchor?** The map; this page is
+  the external-dependency half of it.
 * `docs/operating/data-map.md` — every path these commands write, and what losing it costs.
 * `docs/operating/tuning.md` — the throttles, caps and page limits that decide how hard each of these
   services is hit.

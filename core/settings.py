@@ -27,7 +27,8 @@ lets `config/example/` be run against directly instead of copied over somebody's
 
 The generated `config/settings.schema.json` is the same model as JSON Schema, written to disk so an
 agent (or an editor's YAML language server) can read what it may edit without reading this file.
-Regenerate it with `python -m core.settings`; `core/test_settings_schema.py` fails if it drifts.
+Regenerate it with `python -m core.settings`; `core/test_settings.py` fails if it drifts
+(`test_the_published_schema_is_in_sync_with_the_model`).
 """
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ import os
 from difflib import get_close_matches
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -155,16 +156,33 @@ class LLMSettings(_Section):
                     "already names the providers and their tiers.")
     base_url: str | None = Field(
         default=None, description="Local / self-hosted / proxy endpoint. Omit for the provider's own.")
+    cli_roles: list[str] | None = Field(
+        default=None,
+        description="Model roles (the keys under `models:`) routed through the Claude Code CLI "
+                    "instead of `provider`, so they bill to a Claude subscription rather than an API "
+                    "key. Empty or unset = every role uses `provider`. Per-role rather than global "
+                    "because cost is concentrated in `analyze` while call VOLUME is not, and a "
+                    "subscription has a rate limit where an API key has a bill.")
     structured_method: str | None = Field(
         default=None,
         description="How the response schema is bound. Leave unset on Anthropic: `json_schema` is what "
                     "makes the request byte-identical to the native call it replaced.")
+    effort: Literal["low", "medium", "high", "xhigh", "max"] | None = Field(
+        default=None,
+        description="How hard the model thinks, and the dominant cost lever: billing is output-token "
+                    "dominated and effort is what sets output length. Unset = the provider's own "
+                    "default (`high` on Anthropic). Dropped with a warning on a provider that does "
+                    "not declare support, the same way `thinking` is.")
 
 
 class ModelSettings(_Section):
     analyze: str | None = Field(default=None, description="Judgment: fit + ranking per JD. The expensive one.")
     extract: str | None = Field(default=None, description="Mechanical: job links out of an email.")
     prefilter: str | None = Field(default=None, description="Cheap screen: is this worth an analyze call?")
+    cv_parse: str | None = Field(default=None, description="Mechanical: a posting into the keyword/pitch "
+                                                           "brief a tailored CV is written against.")
+    cv_review: str | None = Field(default=None, description="Judgment: grades a rendered CV against that "
+                                                            "brief as a screener would. Sees only the two.")
 
 
 class PrefilterSettings(_Section):
@@ -333,6 +351,46 @@ def validate(data: dict, path: Path = SETTINGS_PATH) -> dict:
 @lru_cache(maxsize=1)
 def settings() -> dict:
     return validate(load(SETTINGS_PATH))
+
+
+#: WHICH MODEL EACH ROLE RUNS ON, when the settings file does not say. This is the tool's
+#: recommendation, and it is a fact about the code rather than a preference of whoever is using it —
+#: so it lives here, once, and not in any settings file.
+#:
+#: It used to live in the settings file only: `model()` was the ONE accessor with no fallback, so
+#: every settings file had to spell all five ids out, which meant `config/example/settings.yaml`
+#: carried a second copy of them. The two drifted (2026-07-29: the owner moved `analyze` to Sonnet on
+#: cost and the example stayed on an older Opus, shipping every new user an expensive default nobody
+#: had chosen) and the only thing watching for it was a manual "diff these two files" step in the
+#: publish checklist. `core/test_settings.py` now asserts the example states no model ids at all.
+#:
+#: Sonnet for the four cheap/mechanical roles; Opus for `cv_review` alone, which grades a rendered CV
+#: the way a screener would and is the one judgement call worth the money on a first run.
+DEFAULT_MODELS = {
+    "analyze": "claude-sonnet-5",
+    "extract": "claude-sonnet-5",
+    "prefilter": "claude-sonnet-5",
+    "cv_parse": "claude-sonnet-5",
+    "cv_review": "claude-opus-5",
+}
+
+
+#: Top-level settings the shipped example must NOT name, because the code owns them. Asserted by
+#: `core/test_example.py`; it lives here rather than in a test so both tests import it from the module
+#: that owns the fact, rather than one test importing another.
+OWNED_BY_CODE = frozenset({"models"})
+
+
+def model(role: str) -> str:
+    """The model id for one role — the settings file if it names one, otherwise `DEFAULT_MODELS`.
+
+    Every caller in both leaves goes through here, so a provider switch or a new default is one edit.
+    An unknown role is a programming error and says so: the roles are a fixed set, not user input.
+    """
+    if role not in DEFAULT_MODELS:
+        raise KeyError(f"unknown model role {role!r} — known roles: {', '.join(sorted(DEFAULT_MODELS))}")
+    configured = (settings().get("models") or {}).get(role)
+    return str(configured) if configured else DEFAULT_MODELS[role]
 
 
 def schema_json() -> str:

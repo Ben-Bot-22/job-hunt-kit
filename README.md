@@ -60,7 +60,7 @@ A run reports what it did:
   86 analyzed · 0 skipped pre-eval · 0 couldn't-fetch
   ⤷ channels: agencies 178 (insightglobal 87, teksystems 72, motion 5, mondo 14)
   ⤷ semantic dedup: 6 duplicate posting(s) collapsed before scoring
-  ⤷ prefilter: 78 screened out cheaply, 8 sent to claude-opus-4-8 (90% of Opus calls saved)
+  ⤷ prefilter: 78 screened out cheaply, 8 sent to claude-sonnet-5 (90% of judgment calls saved)
   ⤷ liveness: 3 open · 5 CLOSED (of 8 ranked)
 ```
 
@@ -135,7 +135,7 @@ is missing:
 ```
 Scoring new job postings against your rubric (profile/rubric.md).
   looking at   boards · paste  (7-day window)
-  scoring      a cheap claude-sonnet-5 screen first, then claude-opus-4-8 judges what survives
+  scoring      a cheap claude-sonnet-5 screen first, then claude-sonnet-5 judges what survives
   writing      a ranked worklist under data/runs/
 
 PREFLIGHT — what is missing before this run, and how to fix it:
@@ -249,6 +249,13 @@ The vendor is a config value, not a code change. One module builds every model c
 Five workflows ship as [Agent Skills](https://agentskills.dev) — markdown under `.claude/skills/`,
 an open format many clients read. This is how I use it: I open the repo in Claude Code and let it drive.
 
+**They are meant to be edited.** The Python is general; these five files are not — they were written as
+one person's runbook and still read that way: a named user, a Gmail label, a Google Sheet, a Mac. They
+are the most fork-shaped thing in the repo — prose, no schema, nothing parses them, and changing one
+cannot break the pipeline underneath. Rewriting the second person out of them and putting your own rules
+in is not a modification of the tool; it is how the tool is used. Read the skill you care about
+(`.claude/skills/<name>/SKILL.md`) and swap its assumptions for yours.
+
 | skill | what it does |
 |---|---|
 | `/setup` | reads your résumé into a bullet bank, asks about what it can't back, writes your profile and rubric |
@@ -303,18 +310,18 @@ Everything below is in `docs/`. Start with the first two.
 
 | | |
 |---|---|
-| [`operating/triage-operating.md`](docs/operating/triage-operating.md) | the daily run, end to end |
+| [`operating/systems.md`](docs/operating/systems.md) | **the map — what this repo does, which part does it, and what each part's anchor file is. Start here** |
+| [`operating/triage.md`](docs/operating/triage.md) | the daily run, end to end |
 | [`operating/rubric.md`](docs/operating/rubric.md) | how to write a rubric that scores well — the highest-leverage file you own |
 | [`operating/services.md`](docs/operating/services.md) | **every source and service: what it gives you, what it costs, whether it is worth enabling** |
 | [`operating/channels-boards.md`](docs/operating/channels-boards.md) | picking company boards to watch |
 | [`operating/market-report.md`](docs/operating/market-report.md) | the market report, and how to cite its numbers |
-| [`operating/workflows.md`](docs/operating/workflows.md) | the five agent skills, mapped onto your setup |
 | [`operating/scheduling.md`](docs/operating/scheduling.md) | running it unattended, and where that stops |
 | [`operating/data-map.md`](docs/operating/data-map.md) | every file written, and what is safe to delete |
 | [`operating/tuning.md`](docs/operating/tuning.md) | every tuned number, what it trades, how you'd know it's wrong |
 | [`philosophy.md`](docs/philosophy.md) | the goals, and the reasoning behind every refusal above |
 | [`agents/tests.md`](docs/agents/tests.md) | what the test suite is for, and why some of it skips on your clone |
-| [`research/`](docs/research/) | the spikes behind the stack choices — retrieval, structured output, data sources |
+| [`knowledge-base/`](docs/knowledge-base/) | everything learned and every reason — the running log, the decisions, and the spikes behind the stack choices |
 
 ## Secrets
 

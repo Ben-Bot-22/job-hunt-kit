@@ -28,6 +28,9 @@ No network, no git required for anything but the one symlink-in-index check, whi
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "Workflows are Agent Skills under `.claude/skills/`; no `.claude/commands/` directory exists."
 import json
 import re
 import shutil
@@ -42,7 +45,8 @@ LOCK = ROOT / "skills-lock.json"
 README = ROOT / "README.md"
 
 #: This repo's own workflows — the product, as against the vendored engineering skills.
-OWN = ("setup", "job-triage", "research-company", "sync-applied", "tailor-cv", "publish")
+OWN = ("setup", "job-triage", "research-company", "sync-applied", "tailor-cv",
+       "tailor-cv-batch", "publish", "cover-letter", "evaluate-role", "apply-form")
 
 
 def _frontmatter(skill: Path) -> dict[str, str]:

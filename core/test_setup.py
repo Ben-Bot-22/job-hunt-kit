@@ -63,7 +63,9 @@ def test_yes_takes_an_empty_tree_to_a_configuration_that_validates(tree) -> None
     from .settings import Settings, load, validate
     data = load(tree["settings.yaml"])
     assert validate(data, tree["settings.yaml"]) == data
-    assert set(data) == set(Settings.model_fields)      # complete, not whittled down to the answers
+    # Complete, not whittled down to the answers — minus what the code owns (`core.settings.OWNED_BY_CODE`).
+    from .settings import OWNED_BY_CODE
+    assert set(data) == set(Settings.model_fields) - OWNED_BY_CODE
     assert "wrote" in output
 
 

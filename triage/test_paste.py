@@ -210,10 +210,10 @@ def test_a_pasted_job_is_skipped_by_the_archive_side_channel() -> None:
     real mail job, so the assertion is 'the mail one archives and the pasted one doesn't'."""
     pasted, = paste.fetch(3, urls=[_ACME], fetch_jd=_fake_fetch, backfill=_fake_backfill)
     mailed = Job(link="https://x.test/1", company="Zeta", title="Engineer", email_mid="<m1@mail>")
-    lines, n = archive_list_lines([pasted, mailed], {"https://x.test/1"}, "jobs-triage", "2026-07-22")
-    assert n == 1
-    assert "<m1@mail>" in lines[-1]
-    assert _ACME not in "\n".join(lines)
+    plan = archive_list_lines([pasted, mailed], {"https://x.test/1"}, "jobs-triage", "2026-07-22")
+    assert plan.count == 1
+    assert "<m1@mail>" in plan.lines[-1]
+    assert _ACME not in "\n".join(plan.lines)
 
 
 def test_the_pipeline_does_not_fetch_a_pasted_jd_a_second_time(monkeypatch) -> None:

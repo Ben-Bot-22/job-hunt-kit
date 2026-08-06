@@ -5,6 +5,6 @@ analyzes it against Ben's goals with Claude (Opus 4.8), and writes a ranked mark
 
 Leaf package: it imports `core/` (the `Job` model, the JD-fetch chain) and nothing from another leaf —
 see CLAUDE.md → Code layout. Entry point: `python -m triage`. See README.md and
-docs/operating/triage-plan.md.
+docs/knowledge-base/plan-triage-build.md.
 """
 __version__ = "0.1.0"

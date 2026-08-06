@@ -45,7 +45,8 @@ def _registry(seen: list[dict]) -> dict[str, Provider]:
     build = _recording_build(seen)
     return {
         "alpha": Provider(name="alpha", package="fake-alpha", build=build,
-                          env_var="ALPHA_KEY", supports_thinking=True, tier="tested"),
+                          env_var="ALPHA_KEY", supports_thinking=True, supports_effort=True,
+                          tier="tested"),
         "beta": Provider(name="beta", package="fake-beta", build=build,
                          env_var="BETA_KEY", structured_method="json_mode"),
         "local": Provider(name="local", package="fake-local", build=build, env_var=None),
@@ -132,7 +133,7 @@ def test_a_missing_package_is_a_configuration_error_too() -> None:
         pytest.skip("langchain-openai is installed, so there is no missing-package path to see")
     with pytest.raises(ConfigurationError) as e:
         llm.PROVIDERS["openai"].build(model="gpt", api_key="k", max_tokens=10,
-                                      base_url=None, thinking=None)
+                                      base_url=None, thinking=None, effort=None)
     assert "pip install langchain-openai" in str(e.value)
 
 
@@ -174,6 +175,46 @@ def test_thinking_is_dropped_for_a_provider_that_does_not_support_it(monkeypatch
     llm.chat_model("m", max_tokens=10, thinking=llm.THINKING_ADAPTIVE,
                    config={"llm": {"provider": "beta"}}, registry=_registry(seen))
     assert seen[0]["thinking"] is None
+
+
+def test_effort_reaches_the_client_from_settings(monkeypatch) -> None:
+    """`llm.effort` is the dominant cost lever — billing is output-token dominated and effort sets
+    output length. Call sites never pass it, so a value that stops arriving is a silent bill increase
+    with no other symptom: the run still works, it just costs what it used to."""
+    monkeypatch.setenv("ALPHA_KEY", "k")
+    seen: list[dict] = []
+    llm.chat_model("m", max_tokens=10,
+                   config={"llm": {"provider": "alpha", "effort": "medium"}}, registry=_registry(seen))
+    assert seen[0]["effort"] == "medium"
+
+
+def test_effort_is_dropped_for_a_provider_that_does_not_support_it(monkeypatch) -> None:
+    """Same reasoning as `thinking` above: effort is Anthropic's `output_config.effort`, and
+    forwarding it to a provider that doesn't take it is a TypeError on a stranger's first run."""
+    monkeypatch.setenv("BETA_KEY", "k")
+    seen: list[dict] = []
+    llm.chat_model("m", max_tokens=10,
+                   config={"llm": {"provider": "beta", "effort": "medium"}}, registry=_registry(seen))
+    assert seen[0]["effort"] is None
+
+
+def test_unset_effort_leaves_the_provider_default(monkeypatch) -> None:
+    """Omitting the key must mean 'the provider decides', not 'low'. A default invented here would
+    silently re-tune every install that never opted in."""
+    monkeypatch.setenv("ALPHA_KEY", "k")
+    seen: list[dict] = []
+    llm.chat_model("m", max_tokens=10, config={"llm": {"provider": "alpha"}}, registry=_registry(seen))
+    assert seen[0]["effort"] is None
+
+
+def test_the_real_anthropic_factory_takes_reasoning_effort(monkeypatch) -> None:
+    """The fake registry can't catch a misspelled kwarg. `reasoning_effort` is langchain-anthropic's
+    field name for `output_config.effort`; if a version bump renames it, the cost lever silently
+    stops working on the one provider anything was measured on."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-not-used")
+    model = llm.chat_model("claude-sonnet-5", max_tokens=8000, thinking=llm.THINKING_ADAPTIVE,
+                           config={"llm": {"provider": "anthropic", "effort": "medium"}})
+    assert model.reasoning_effort == "medium"
 
 
 def test_the_real_anthropic_factory_builds_the_call_analyze_py_makes(monkeypatch) -> None:

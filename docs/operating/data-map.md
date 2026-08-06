@@ -136,9 +136,13 @@ KB each.
 **`data/reports/` — permanent for the numbers, disposable for the rendering.** The split is deliberate
 and it is documented in `docs/operating/market-report.md`: the numbers file is machine-owned and
 accumulating, the markdown is a render of it, and the narrative that cites it lives in
-`profile/notes/market-insights.md`, which is **hand-authored and never overwritten by anything.**
+`docs/knowledge-base/personal/market/market-insights.md`, which is **hand-authored and never overwritten by anything.**
 
 **`matches/` and `applications/` — permanent, and yours.** One file or folder per run or application.
+`applications/` is split in two: the **top level is the live set** — the jobs on the current apply doc —
+and **`applications/archive/`** holds everything closed out, applied to, or superseded. Archiving is
+one-way and by *liveness*, not by date: a folder dated last week can still be live, so a date cut would
+bury it. Nothing is ever deleted; a superseded résumé is the record of what was actually sent.
 
 **`profile/` and `config/` — permanent, tracked, and the only things here in git.**
 

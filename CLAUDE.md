@@ -1,6 +1,7 @@
 # jobs-db
 
 @AGENTS.md
+@docs/operating/systems.md
 
 <!--
 This file is a stub on purpose. `AGENTS.md` is the source of truth and everything is written there.

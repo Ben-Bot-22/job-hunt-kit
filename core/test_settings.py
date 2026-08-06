@@ -23,11 +23,15 @@ The failure directions, in the order they cost something:
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "`config/settings.yaml` is schema-validated on load, so a misspelled key names itself instead of silently defaulting."
 import json
 
 import pytest
 
-from .settings import (CHANNEL_NAMES, SCHEMA_PATH, SETTINGS_PATH, ConfigurationError, Settings,
+from .settings import (CHANNEL_NAMES, DEFAULT_MODELS, SCHEMA_PATH, SETTINGS_PATH, ConfigurationError,
+                       Settings, model,
                        load, schema_json, settings, validate)
 
 
@@ -202,3 +206,40 @@ def test_the_channel_names_are_pinned() -> None:
     """The four registered channels. `triage/test_channels.py` asserts these match the live registry —
     here so that `core/` alone still fails if one is quietly dropped from the schema."""
     assert CHANNEL_NAMES == ("mail", "boards", "agencies", "paste", "gmail")
+
+
+# --------------------------------------------------------------------------------------------------
+# Which model each role runs on — owned by the code, stated once
+# --------------------------------------------------------------------------------------------------
+
+def test_every_role_has_a_default_so_no_settings_file_has_to_name_one() -> None:
+    """`model()` was the ONE accessor with no fallback, and that is what made the duplication.
+
+    Every other accessor carries `cfg().get(key, default)`, so a settings file may stay silent about
+    anything it does not care about. `models` could not: `cfg()["models"][role]` raised, so every
+    settings file had to spell all five ids out — which meant `config/example/settings.yaml` held a
+    second copy of them, kept in step by a human reading a diff. On 2026-07-29 the owner moved
+    `analyze` to Sonnet on cost and the example was not touched, so for two weeks every new user's
+    default was an older, more expensive model nobody had chosen, and the only thing watching was a
+    manual step in the publish checklist.
+    """
+    from .settings import ModelSettings
+    # Iterated off the SCHEMA, not off DEFAULT_MODELS: iterating the dict against itself would pass
+    # for a role added to `ModelSettings` and forgotten here, which then raises KeyError on the first
+    # real call. The two sets must stay equal, and this is the assertion that says so.
+    assert set(DEFAULT_MODELS) == set(ModelSettings.model_fields)
+    for role in ModelSettings.model_fields:
+        assert model(role), f"{role} has no default"
+
+
+def test_an_unknown_role_says_so_rather_than_raising_a_bare_keyerror() -> None:
+    """The roles are a fixed set in the code, never user input, so a miss here is a typo in a call."""
+    with pytest.raises(KeyError, match="unknown model role"):
+        model("analyse")
+
+
+def test_a_settings_file_still_overrides_the_default(monkeypatch) -> None:
+    """The default is a starting point, not a policy. Switching provider is still one file."""
+    monkeypatch.setattr("core.settings.settings", lambda: {"models": {"analyze": "gpt-5"}})
+    assert model("analyze") == "gpt-5"
+    assert model("prefilter") == DEFAULT_MODELS["prefilter"]   # untouched roles keep the default

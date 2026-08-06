@@ -2,9 +2,9 @@
 
 > **If you are a Claude session and Ben pointed you here: this is all the context you need to run,
 > explain, or modify the triage tool.** Read this top-to-bottom, then act. Design rationale (the *why*)
-> lives in [`triage-plan.md`](triage-plan.md); this doc is the *how it actually works now*.
+> lives in [`plan-triage-build.md`](../knowledge-base/plan-triage-build.md); this doc is the *how it actually works now*.
 >
-> **Before changing anything, read [`triage-engineering-log.md`](triage-engineering-log.md)** — the
+> **Before changing anything, read [`log.md`](../knowledge-base/log.md)** — the
 > lessons behind the current design, plus the open bug list. Several of its entries are mistakes that
 > were made twice; it exists so there isn't a third time.
 
@@ -32,7 +32,7 @@ the script's:
 Run bare in a terminal, `python -m triage` still works but gives you *only* Tier 1 — email-body/easy-fetch
 analysis, no walled JDs, no archiving. The full digest only happens through Claude.
 
-**The `/job-triage` runbook** (`.claude/commands/job-triage.md`) tells the session exactly what to do; the short
+**The `/job-triage` runbook** (`.claude/skills/job-triage/SKILL.md`) tells the session exactly what to do; the short
 version is a three-phase loop:
 
 ```
@@ -40,8 +40,22 @@ Phase 1  .venv/bin/python -m triage        → worklist (preliminary) + state + 
 Tier 2   Claude + Ben's Chrome             → fetch each queued walled JD → browser-jds-<date>.json
 Phase 3  .venv/bin/python -m triage --merge → re-rank with the full JDs → final worklist
 Archive  Claude + Gmail connector          → move processed emails to jobs-triage
+Apply doc Claude                           → matches/<date>.md, the checkbox list Ben works from
+Package  Claude, fanned out per job        → research → re-rank the doc → résumé → cover letter
 Digest   Claude                            → present Focus picks + summary to Ben
 ```
+
+**The package half is the run's output, not an extra.** Every pick worth applying to — **capped at
+10** — gets a company brief, a tailored résumé and a cover letter. The set is defined once, by
+`.venv/bin/python -m cv.batch worklist matches/<date>.md --top 10`, and the three stages share it so
+they cannot disagree about which jobs are in. **Research runs before the documents** because it is the
+step that changes whether to apply at all (agency rather than employer, the same req shopped under
+three names, a company already on the skiplist), and finding that out after ten résumés are built
+wastes the ten. Its findings are written back into the apply doc — reordered rows, a `Research:` line
+per entry, and a strike-through on anything it killed.
+
+**The cap is a ceiling, not a quota.** A run that recommends four jobs produces four packages;
+padding to ten manufactures work on roles that did not clear the bar.
 
 Ben's only manual touch: type `/job-triage`, and click a CAPTCHA checkbox if a walled site challenges (one
 click usually clears the whole session). Everything else is automatic.
@@ -86,10 +100,15 @@ directory diagram was not followed literally.
 
 ## The three models
 
-- **Analyze = `claude-opus-4-8`**, adaptive thinking, default (high) effort — the judgment. ~6–12s/JD.
-- **Extract = `claude-sonnet-5`** — cheap mechanical job extraction from emails.
-- **Prefilter = `claude-sonnet-5`** — the cheap screen described below.
-- All use a prompt-cached system block. Change via `config/settings.yaml → models`.
+**The ids are not written down here, deliberately.** `core.settings.DEFAULT_MODELS` names one model per
+role and a `models:` block in `config/settings.yaml` overrides it per role — so that dict is the only
+current copy. An id repeated in prose is exactly the duplication that shipped every new user a model
+nobody had chosen until 2026-08-06 (`docs/knowledge-base/log.md`).
+
+- **`analyze`** — the judgment: fit and ranking per JD, adaptive thinking. The call that costs the money.
+- **`extract`** — cheap mechanical job extraction from emails.
+- **`prefilter`** — the cheap screen described below.
+- All use a prompt-cached system block.
 
 ## Prefilter — two cheap gates before Opus (added 2026-07-20)
 
@@ -112,7 +131,7 @@ almost entirely from `max_workers` (below). Expect the prefilter to make a run *
 never sees the job. The Sonnet prompt says this explicitly, and the screen **fails open** — any API
 error, refusal, or unparseable response keeps the job.
 
-Prefiltered jobs are **not** hidden: they render under "Rejected / skipped" with their reason, and carry
+Prefiltered jobs are **not** hidden: they render under "✕ Review — held back and rejected" with their reason, and carry
 `prefiltered: true` in the state file.
 
 **Validated against the real 2026-07-20 run** (`state-2026-07-20-094851.json`): 0 of 59 high-fit (≥70)
@@ -264,8 +283,27 @@ moves. The `email_mid` (Message-ID) captured at read time is the handle that tie
   job extracted from it (pre-dedup) is resolved — analyzed this run, already seen/applied, **or a
   duplicate of a job resolved elsewhere**. Resolution is by *dedup key*, so a duplicate-alert email
   (LinkedIn + Google on the same job) still archives instead of lingering, while a `--limit`-truncated
-  digest with any un-analyzed job is never half-archived. Each line: `<message-id>\t<label>\t<context>`.
+  digest with any un-analyzed job is never half-archived. Each line:
+  `<message-id>\t<label>\t<from>\t<subject>\t<context>` — the sender and subject are on the line because
+  the apply doc has to show something a person recognises their own mail in, and a bare id is not that.
   `--no-archive` skips it.
+- **What the script REFUSES to write, and this is the important half.** Two independent guards stand
+  between a resolved email and that file. `channels.common._is_correspondence` classifies at extraction
+  time; `has_human_display_name` is a shape test on the From: header applied at the last moment, and it
+  exists because the first was *correct* and still let a live recruiter through. On 2026-07-27 the
+  automated-sender pattern was widened to match board domains with subdomains — right, it fixed ~50
+  misclassified Dice blasts — and that made `user.dice.com`, Dice's private recruiter relay, read as
+  automated, so an unanswered IMCS Group recruiter email was archived on 2026-07-29. A named relay list
+  (`_PRIVATE_RELAY`) fixes one host; it cannot fix the next board to start relaying human mail. So
+  anything whose From: header names a person is **held back**, listed in the worklist under
+  `📥 HELD BACK from archiving`, and reported in the run summary. Replayed over the 2026-07-29 corpus
+  that holds 2 of 20 emails, both written by a person, and archives every blast.
+
+  The heuristic is crude in the safe direction on purpose: `"Robert Half" <alerts@roberthalf.com>` reads
+  as a person and gets held. A wrongly-held alert costs one email left in an inbox for a day; a wrongly-
+  archived human costs a warm inbound lead permanently, because `jobs-triage` is a label Ben does not
+  read. **An unscored job's email is held too** — see `Job.analysis_errored`: the job is deliberately left
+  out of `seen.json` so tomorrow retries it, which only works if tomorrow's ingest can still find the mail.
 - **What a Claude session does** (the archive step) — for each Message-ID in the list:
   1. `search_threads(query="rfc822msgid:<id>")` → get the `threadId` (or messageId).
   2. `label_thread(threadId, ["<jobs-triage label id>"])` — add the label. Get the id from `list_labels`
@@ -344,13 +382,47 @@ that supply without touching the mail run that already happened.
   process new arrivals** (this is what keeps ongoing cost small).
 - `profile/skiplist.md` — Ben pastes an id here when he applies to / rejects a role. Checked *before* any
   fetch/analysis. Each worklist entry prints its `id` for this.
+- `data/corpus/applied.json` — synced from the applied-jobs sheet by `/sync-applied`. See below.
 - id = `composite_id` = normalized `company|title|city`. Same company+title collapses to one id (by
   design), so near-dup postings dedup together.
 - **To force a clean full-backlog run:** `rm data/corpus/seen.json`.
 
+```
+blocked = seen.json | skiplist.md | applied.json
+          (analyzed)  (hand-edited)  (synced from the sheet)
+```
+
+### The applied-sheet sync, and why it needs a model call
+
+The sheet is free-form, so there is no column map that works: `hiring company` is blank on about half
+the rows, `job-id` holds a req number *or* a location *or* a title-and-req mash *or* the company, the
+real title is sometimes in `description`, and the company is often only inferable from the link domain
+(`careers-gotyto.icims.com` → Tyto). The title lives in a different place per row.
+
+So `/sync-applied` has **Claude normalize each row in-session** into clean
+`{company, title, city, url, confidence, note}` and hands those to Python. `triage/applied.py` computes
+the keys — so they always match the ranker's `composite_id` rather than a caller's guess — and writes
+`data/corpus/applied.json`. **The sheet is the source of truth**, so each sync fully replaces the file.
+
+**Two keys per record.** A candidate is skipped if *either* matches: the composite key
+`composite_id(company, title, city)`, or a url key (`'url:' + normalized apply URL`, tracking params
+stripped) which catches the case where the model's company/title differ slightly from the ranker's.
+
+**Confidence gating.** `high`/`medium` auto-block; **`low` is stored but not blocked** — it is reported
+back for review. Silently hiding a job he *didn't* apply to is worse than one occasionally resurfacing,
+so ambiguous rows (a bare link, no real title) fail open.
+
+**Keeping it cheap:** fill `hiring company`, and keep the title in its own column rather than `job-id`.
+Clean rows normalize to `high` confidence with no judgement call.
+
+Reading the sheet needs the Drive connector, which is **interactive-session only** — absent in headless
+and cron runs; paste a CSV export as the fallback. Under the hood: `python -m triage --sync-applied
+<rows.json>`. Files: `triage/applied.py`, `triage/__main__.py` (`--sync-applied` and the `blocked` union
+in `_phase1`), `profile/profile.yaml → applied_sheet`.
+
 ## Gotchas discovered during the build (read before debugging)
 
-- **LinkedIn links only survive in the raw email `source`, not `content`.** `channels/mail.py` reads
+- **LinkedIn links only survive in the raw email `source`, not `content`.** `triage/channels/mail.py` reads
   `source of m` and parses it with Python's `email` module (decodes quoted-printable), then hands the
   decoded job URLs to the extractor. If links stop appearing, this is the first place to look.
 - **Indeed hard-blocks scraping (HTTP 451)** — even via Jina. Those degrade to the email snippet and
@@ -371,6 +443,26 @@ that supply without touching the mail run that already happened.
 `▶ Focus today` (top ≤5 STRONG/FIT, full detail: why/role/meets-goals/red-flags/tailor-keywords/link/id)
 → `PRIMARY / SECONDARY / OPPORTUNISTIC` (ranked one-liners) → `✕ Rejected` (SKIP + reason) →
 `⚠ Couldn't fetch` (open manually). Links render as `[open ↗](url)`; each entry ends with its `id`.
+
+## The apply doc's `##` headings are a machine interface
+
+`matches/<date>.md` is written for Ben, but since the package stages take their work list from it,
+**`cv/batch.py` also parses it** — and most of that file is `- [ ]` lines that are *not* jobs to apply
+to: the mail audit, the JDs nobody could fetch, and `📬 Reply, don't cold-apply`, which holds processes
+already in motion where a cold application cuts across a live conversation.
+
+So `worklist()` classifies each `##` by name against two lists, and:
+
+* **a `###` subsection inherits from the `##` above it** — subsection names are invented fresh every
+  run (`### Strong, but each needs a move` appeared once under `## Tier 2`) and the parent already
+  answered the question;
+* **an unrecognized `##` raises**, on the same reasoning as `scripts/extract.py`'s allowlist: both
+  guesses are wrong. Treat it as work and the run builds documents for jobs Ben must not cold-apply
+  to; treat it as audit and the run silently builds none and reports success.
+
+The fixed vocabulary is in `/job-triage` Step 6. **If the command raises, fix the heading in the apply
+doc — do not hand-assemble the list instead**, because that is how the three stages start disagreeing
+about which jobs are in the set.
 
 ## What Ben still owns (not code)
 

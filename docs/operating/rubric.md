@@ -63,8 +63,8 @@ Two things a reader reasonably expects to find here and will not:
 
 * **The prefilter never sees it.** `triage/prefilter.py` runs first, on regex rules and a small model
   call, and it is what decides whether a job is worth an Opus call at all. A job it drops is never
-  scored, so no rubric edit can rescue it — it appears in the worklist's `Rejected / skipped` section
-  with a screen reason instead. If in-lane roles are landing there, the fix is in `prefilter.py`, not
+  scored, so no rubric edit can rescue it — it appears in the worklist's `✕ Review — held back and rejected`
+  section with a screen reason instead. If in-lane roles are landing there, the fix is in `prefilter.py`, not
   here. See [`tuning.md` §3](tuning.md).
 * **The verdict bands and the score ranges are in `analyze.py`.** `STRONG_FIT = 80–95` and what each
   band means are hard-coded in the system prompt around your rubric, along with the channel tiers.
@@ -103,6 +103,20 @@ Shown, ranked lower, never skipped. This is where most of your real opinions liv
 posting worth seeing but not worth wanting. A hybrid role that would need a move, a 4–5 intensity
 signal, a contract with no stated conversion.
 
+**Intensity belongs here rather than in §3, and that is deliberate (2026-08-04).** A 4–5 sorts the
+role below an equal-fit sane-hours one and prints the phrase the scorer keyed on; it does not remove
+the role and it does not cap the verdict. The reason is evidential rather than a matter of taste:
+intensity is inferred from prose, so it is the least reliable number in the analysis, and the least
+reliable number should not be the one making irreversible decisions. On-call rotations, 24/7 uptime,
+incident response, cross-team ownership, sprints and deadlines are ordinary conditions of employment —
+write down which demands actually cross *your* line and let the rest rank.
+
+Two hours criteria still leave the list, and both are written in the rubric rather than the code: a
+**travel percentage** above the threshold your rubric names (`held_back_reason: "travel"` — checkable,
+because the posting states a number), and a posting **claiming the whole person** (`"intensity"` —
+"passion, not counting hours" and its relatives). Both land in the worklist's review section with
+their links, because the point of holding a role back is that you can still pull it forward.
+
 Some entries in this section also carry `CAP AT LOW_FIT`, which is a different and stronger thing —
 see §3.
 
@@ -127,19 +141,6 @@ own section below (§4).
 `verdict = SKIP`. Facts you can check and be right about — not preferences. In the example: non-US,
 a posted band clearly below the floor, a primary stack that is not the candidate's, a required
 clearance.
-
-### BODY SHOP
-
-A hard filter with enough nuance to need its own block, and worth keeping in whatever you write. It
-keys on **tells, never on "is this a staffing firm"** — for many job seekers agencies are the fastest
-supply channel there is, and skipping them wholesale removes the best lane on the board:
-
-> BODY SHOP (verdict = SKIP) — key on the TELLS, NEVER on "is this a staffing firm". A recruiter or
-
-The tells are things like concatenated work-authorization categories, a demand for identity documents
-up front, or a vendor that will not name the client at all. Note the two-strength design: some tells
-skip alone, and a set of **weak** tells skip only in combination — an in-person-only interview by
-itself is a plain onsite employer.
 
 ### CANDIDATE
 
@@ -261,7 +262,7 @@ What to do instead, cheapest first:
    the rule is ambiguous, not too weak, and the fix is usually a calibration case rather than louder
    wording.
 2. **Check you are looking at the right stage.** A job missing entirely is a prefilter result, not a
-   rubric result. Look in `Rejected / skipped` before editing anything here.
+   rubric result. Look in `✕ Review — held back and rejected` before editing anything here.
 3. **Run `scripts/before_after.py`** when the change is big enough to be worth twenty Opus calls. It
    re-scores a fixed, deterministic sample of twenty stored JDs — the same twenty both times, in id
    order — and diffs the ranking fields strictly while merely counting the prose. Record before the
@@ -312,7 +313,7 @@ scoring, rather than as a named exception in the rubric that costs an Opus call 
 
 ## See also
 
-* [`triage-operating.md`](triage-operating.md) — the daily run end to end, and where the score lands.
+* [`triage.md`](triage.md) — the daily run end to end, and where the score lands.
 * [`tuning.md`](tuning.md) — every other tuned number, including the prefilter's own hard-coded bars.
 * [`workflows.md`](workflows.md) — the five skills, and which of their assumptions are one person's.
 * [`../philosophy.md`](../philosophy.md) — why the tool refuses to apply on your behalf, which is

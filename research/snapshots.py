@@ -17,7 +17,7 @@ easiest one to get wrong, so it is gated and it says so until the gate opens:
     snapshots in one week, or two snapshots six months apart, are each a trend claim resting on one
     observation.
   * **Never across a rubric boundary.** The numbers in a snapshot are aggregates over a *scored*
-    corpus, and the scorer is a prompt. The 598-job corpus behind `profile/notes/market-insights.md`
+    corpus, and the scorer is a prompt. The 598-job corpus behind `docs/knowledge-base/personal/market/market-insights.md`
     was scored by the frozen pipeline's own scorer, deleted in stage 5 · 01 — a different rubric with
     a different schema — and both it and today's analyzer emit `STRONG_FIT`, so the two join
     without complaint and the resulting

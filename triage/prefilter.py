@@ -7,18 +7,24 @@ Paying Opus to rediscover "12+ years required" 300 times is waste.
 Two gates, cheapest first:
 
   1. `hard_skip`  — deterministic regex over the JD. Free, instant, and NEVER drifts. Encodes the skip
-     patterns already documented in profile/notes/market-insights.md (10+yr bars, clearance, heavy travel,
+     patterns already documented in docs/knowledge-base/personal/market/market-insights.md (10+yr bars, clearance, heavy travel,
      .NET/Java-primary titles). This also fixes a real mis-rank: on 2026-07-13 a Dice role that stated
-     "10+ Years of Experience" scored 83 and reached the apply list. It also carries the body-shop
-     skip, which is the one rule here whose false-positive direction is expensive enough to be worth
-     reading before editing — see `_SHOP_STRONG`.
+     "10+ Years of Experience" scored 83 and reached the apply list.
+
+     It carried a **body-shop** skip until 2026-07-30, keyed on how a posting was written. Removed at
+     Ben's instruction: measured over 2,185 analyzed jobs it labelled ~1%, and nearly every one of
+     those was already dying on an independent rule — out-of-lane stack (Tata: PySpark/Hadoop, VLink:
+     Azure, Arohana: Vue), non-US (Remote VA: Philippines), or location/shape. A second label on jobs
+     the stack, location and rate rules already caught, at the cost of a drifting regex surface pinned
+     to 2026-07 vendor boilerplate. See docs/knowledge-base/decision-body-shop-skip-or-cap.md.
 
   2. `cheap_screen` — one small Sonnet call. Kills the obvious out-of-lane remainder before Opus.
      Deliberately biased toward KEEP: a false kill costs Ben a job he never sees, a false keep costs
      one Opus call. Those are not symmetric, so the prompt says so explicitly.
 
 Anything surviving both gates goes to Opus for the real judgment. Prefilter kills are still rendered in
-the worklist's "Rejected / skipped" section with their reason, so nothing disappears silently.
+the worklist's "✕ Review — held back and rejected" section with their reason, so nothing
+disappears silently.
 """
 from __future__ import annotations
 
@@ -69,66 +75,6 @@ _OFF_LANE_TITLE = re.compile(
     r"\b(java|\.net|c#|dotnet|salesforce|sap|abap|ios|android|swift|kotlin|golang|rust|php|drupal)\b", re.I)
 _IN_LANE_RESCUE = re.compile(r"\b(javascript|java\s*script)\b", re.I)  # don't let "JavaScript" match "java"
 
-# Body shop. The rule keys on the TELLS and never on "is this a staffing firm" — Ben's PRIMARY tier IS
-# agencies (Motion, TEKsystems, Insight Global, Apex, Kore1) and agency reqs are his fastest fills, so a
-# rule that cannot tell a body shop from an agency would cut his best supply. That is the expensive
-# failure direction here, and it is the one every pattern below was narrowed against.
-#
-# Two strengths, because the tells are not equally load-bearing. Measured over the 1,134-job corpus
-# (all six `data/corpus/state-*.json` runs, deduped by link): 6 jobs cut, 0 of the 41 postings from the
-# 28 named staffing agencies in it (Genesis10, Kforce, Aditi, Mindlance, DKKD Staffing, Optomi, Proven
-# Recruiting all survive).
-
-# One of these is enough — nobody but a body shop writes them.
-_SHOP_STRONG = {
-    # "Visa: Any workable visa" (Enterprise Mobility), "Fulltime Any Visa" (Atem Corp).
-    "any-visa": re.compile(r"\b(?:any|all)\s+(?:workable\s+)?visas?\b|\bvisas?\s*[:\-]\s*any\b", re.I),
-    # A work-authorization line dealing in EAD categories: "US-Citizen, H-1B, OPT-EAD, GC-EAD" (Quantum
-    # Technologies), "USC, GC, H4EAD, OPTEAD, GCEAD" (New York Technology Partners). Bare "H-1B" and
-    # "OPT" are NOT tells — 44 corpus jobs mention them and nearly all are direct employers saying they
-    # will not sponsor (Solventum, Jiffy, BNSF, KPMG). The concatenated EAD forms are the vocabulary of
-    # a shop that places against every status, which is why the polarity doesn't matter: MPower Plus
-    # excludes them ("no OPT, GC_EAD and CPT") and is still a body shop.
-    "ead-categories": re.compile(r"\b(?:H4|L2|GC|OPT)\s*[_\- ]?\s*EAD\b|\bEAD\s*[_\- ]?\s*(?:GC|H4|L2|OPT)\b", re.I),
-    # Local-driver's-licence-only, and the document demands that travel with it.
-    "local-dl": re.compile(
-        r"local\s+(?:valid\s+)?(?:DL\b|driver)"
-        r"|\b(?:DL|driver'?s?\s+licen[cs]e)\s+(?:copy|is\s+a\s+must|mandatory)"
-        r"|copy\s+of\s+(?:your\s+)?(?:DL\b|driver)", re.I),
-    # A vendor that will not name the client AT ALL: "Client: To Be Discussed Later" (Quantum). This is
-    # deliberately narrow. An agency describing the client generically is normal and must not match —
-    # Genesis10's "a Major Financial Institution" is the calibration rubric's STRONG_FIT ~90 example.
-    "client-withheld": re.compile(
-        r"client\s*[:\-]\s*(?:to\s+be\s+(?:discussed|disclosed|shared)|confidential|tbd"
-        r"|will\s+be\s+(?:disclosed|shared|discussed))", re.I),
-}
-
-# These need TWO to fire. Each one alone appears in postings from real employers, and the corpus proves
-# it: "in-person interview" alone would have killed Versant Media, Acuity Insurance and Allocate, none
-# of which is a body shop. The spec named in-person-only as a tell; the corpus narrowed it to a
-# corroborating one, which is what acceptance criterion 5 asks for.
-_SHOP_WEAK = {
-    "req-boilerplate": re.compile(
-        r"mode\s+of\s+interview|interview\s+mode\s*[:\-]"
-        r"|share\s+your\s+(?:updated\s+)?resume|send\s+(?:me\s+)?your\s+updated\s+resume", re.I),
-    "profile-policing": re.compile(
-        r"linkedin\s+profile\s+is\s+a\s+must|profile\s+.{0,30}match\s+the\s+resume"
-        r"|\bpassport\s+number\b|last\s*4\s+.{0,15}ssn", re.I),
-    "bodies-not-people": re.compile(r"\b(?:senior\s+)?resource\s+with\s+\d|\bconsultants?\s+from\s+the\b", re.I),
-    "in-person-only": re.compile(r"in[-\s]person\s+interview|face\s+to\s+face\s+interview|\bf2f\b", re.I),
-    "local-only": re.compile(r"local\s+candidates?\s+only|only\s+local\s+candidates?", re.I),
-}
-
-
-def _body_shop_tells(jd: str) -> list[str]:
-    """The tells present, or [] — a list rather than a bool so the skip reason can name them."""
-    strong = [name for name, r in _SHOP_STRONG.items() if r.search(jd)]
-    weak = [name for name, r in _SHOP_WEAK.items() if r.search(jd)]
-    if strong:
-        return strong + weak
-    return weak if len(weak) >= 2 else []
-
-
 def _entry_years(text: str) -> int:
     """The LOWEST stated experience bar — the real entry gate.
 
@@ -170,9 +116,6 @@ def hard_skip(job: Job) -> str | None:
         trav = _max_travel(jd)
         if trav >= _TRAVEL_BAR:
             return f"prefilter: {trav}% travel required (>= {_TRAVEL_BAR}%)"
-        tells = _body_shop_tells(jd)
-        if tells:
-            return f"prefilter: body-shop tells ({', '.join(tells)})"
     return None
 
 
@@ -214,7 +157,8 @@ def _screen_model():
     one, as it was on the native path. Built lazily, inside `cheap_screen`'s try, so a missing key
     surfaces as the same fail-open warning rather than at import.
     """
-    return llm.structured(_Screen, config.model("prefilter"), max_tokens=_SCREEN_MAX_TOKENS)
+    return llm.structured(_Screen, config.model("prefilter"), max_tokens=_SCREEN_MAX_TOKENS,
+                          role="prefilter")
 
 
 def cheap_screen(job: Job) -> tuple[bool, str]:
@@ -248,7 +192,7 @@ def cheap_screen(job: Job) -> tuple[bool, str]:
 
 
 def skip_analysis(reason: str) -> Analysis:
-    """The Analysis stub a prefiltered job carries, so it still renders under 'Rejected / skipped'."""
+    """The Analysis stub a prefiltered job carries, so it still renders in the review section."""
     return Analysis(
         tier="OPPORTUNISTIC", fit_score=0, intensity=3, verdict="SKIP",
         why=reason, role_summary="", meets_goals="(screened out before full analysis)",

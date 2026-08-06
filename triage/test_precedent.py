@@ -76,7 +76,14 @@ def _job(title="Senior React Developer", company="Robert Half", jd="Remote contr
 
 @pytest.fixture
 def wired(tmp_path, monkeypatch):
-    """`for_job` reads a process-wide index; point it at the fixtures."""
+    """`for_job` reads a process-wide index; point it at the fixtures.
+
+    Also forces the feature on. These tests state rules about the *block* — what it must say and
+    must not carry — and those rules hold whether or not the owner is currently running with
+    `precedent.enabled`. Reading the live setting here would make the whole file a photograph of
+    `config/settings.yaml` and go green by doing nothing the day it is switched off.
+    """
+    monkeypatch.setattr(config, "precedent_enabled", lambda: True)
     monkeypatch.setattr(precedent, "_index", _index(tmp_path))
     monkeypatch.setattr(precedent, "_index_failed", False)
 
@@ -116,6 +123,15 @@ def test_the_block_says_the_rubric_outranks_the_precedent(wired):
     assert "GOAL PROFILE ABOVE OUTRANKS EVERY PRECEDENT" in text
     assert "THE RULE WINS" in text
     assert "not to copy a score" in text
+
+
+def test_the_block_retires_the_location_rule_the_rubric_reversed(wired):
+    """28% of the indexed rationales cap a job for being onsite — scored before the rubric opened the
+    funnel to relocation. The precedence rule stops a precedent claiming authority; it does not stop
+    three of them anchoring on a dimension that has since flipped. The block has to say so."""
+    text = precedent.for_job(_job())
+    assert "SUPERSEDED RULE — LOCATION" in text
+    assert "does NOT downrank for location" in text
 
 
 def test_the_block_carries_no_jd_text(wired):

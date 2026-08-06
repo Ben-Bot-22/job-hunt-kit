@@ -135,13 +135,13 @@ def _by_path(docs):
 def test_markdown_chunk_carries_its_full_heading_path():
     """An uncitable chunk is the whole reason for heading-aware splitting: retrieval has to be able
     to say *where* the claim came from."""
-    docs = _by_path(chunk_markdown(MD, source="profile/notes/tailoring-playbook.md"))
+    docs = _by_path(chunk_markdown(MD, source="docs/knowledge-base/personal/tailoring-playbook.md"))
     assert "Tailoring playbook > Braintrust > Rate" in docs
     rate = docs["Tailoring playbook > Braintrust > Rate"]
     assert "Bid at the top of the band." in rate.page_content
     assert rate.metadata["heading"] == "Rate"
     assert rate.metadata["heading_level"] == 3
-    assert rate.metadata["source"] == "profile/notes/tailoring-playbook.md"
+    assert rate.metadata["source"] == "docs/knowledge-base/personal/tailoring-playbook.md"
 
 
 def test_sibling_sections_do_not_bleed_into_each_other():

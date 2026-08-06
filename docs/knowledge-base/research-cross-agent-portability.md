@@ -4,8 +4,20 @@ Research findings for `.scratch/jobs-db-oss-rag/issues/02-cross-agent-portabilit
 Researched 2026-07-21. Every load-bearing claim is cited to the vendor that owns it.
 
 > **Note on placement.** Settled: `docs/` is the single doc root — `docs/operating/` (runbooks),
-> `docs/agents/`, `docs/research/` (one-off artifacts like this one). Personal strategy notes live in
-> `profile/notes/`.
+> `docs/agents/`, `docs/knowledge-base/` (one-off artifacts like this one). Personal strategy notes live in
+> `docs/knowledge-base/personal/`.
+
+> **Reading this against today's code (added 2026-07-30).** Written before the `core/` extraction, so it
+> names modules that have since moved. The **findings are unchanged** — only the addresses are:
+> * `triage/ingest.py` → split into **`triage/channels/mail.py`** (the Apple Mail half, and still *"the
+>   one file in the repo that shells out to `osascript`"* per its own docstring) and
+>   **`triage/channels/common.py`** (everything else).
+> * `triage/archive.py` → **`triage/channels/gmail_api.py`**.
+>
+> **The macOS-only constraint this document identifies is still live** — it moved, it was not fixed.
+> Do not read a missing filename as a resolved limitation. This note exists because
+> `setup/SKILL.md` and `research-company/SKILL.md` both send readers here *before changing portability*,
+> so it is a live gate rather than a closed artifact.
 
 ## TL;DR
 

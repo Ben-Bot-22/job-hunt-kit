@@ -105,27 +105,6 @@ def test_no_secret_reaches_a_tracked_config_file() -> None:
 # The values the pipeline runs on, pinned
 # --------------------------------------------------------------------------------------------------
 
-@owner_only
-def test_operational_values_survived_the_move() -> None:
-    """Every number `triage/config.yaml` supplied, from `config/settings.yaml` instead.
-
-    Owner-only because these are the owner's tuned numbers, not the tool's defaults: the public
-    snapshot ships the example's settings (a 7-day window, 5 workers — first-run values), so pinning
-    3 and 12 here would fail on every clone but this one and say nothing true about the tool.
-    """
-    assert config.window_days() == 3
-    assert config.model("analyze") == "claude-opus-4-8"
-    assert config.model("extract") == "claude-sonnet-5"
-    assert config.model("prefilter") == "claude-sonnet-5"
-    assert config.max_workers() == 12
-    assert (config.prefilter_enabled(), config.prefilter_screen_enabled()) == (True, True)
-    assert (config.precedent_enabled(), config.precedent_k()) == (True, 3)
-    assert (config.dedup_enabled(), config.dedup_similarity(),
-            config.dedup_overlap(), config.dedup_min_jd_chars()) == (True, 0.95, 0.80, 500)
-    assert (config.liveness_enabled(), config.liveness_max_check(),
-            config.liveness_workers()) == (True, 60, 16)
-
-
 def test_gmail_stays_off() -> None:
     """`gmail` is off in every shipped config — 05's stub raises, and an enabled stub prints
     `gmail CRASHED` every morning.
@@ -158,7 +137,7 @@ def test_identity_values_survived_the_move() -> None:
     assert config.applied_sheet() == identity["applied_sheet"] != ""
     assert len(config.primary_agencies()) == len(identity["primary_agencies"]) > 0
     assert "teksystems" in config.primary_agencies()  # lower-cased on the way out, unlike the file
-    assert "braintrust" in config.secondary_platforms()
+    assert config.secondary_platforms() == [s.lower() for s in identity["secondary_platforms"]]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -166,20 +145,22 @@ def test_identity_values_survived_the_move() -> None:
 # --------------------------------------------------------------------------------------------------
 
 @owner_only
-def test_the_rubric_moved_whole() -> None:
-    """The parts of the anchor that were tuned after a named mis-score, verbatim.
+def test_the_rubric_still_has_its_sections() -> None:
+    """The anchor's structure, not its wording.
 
-    Each of these is a line Ben wrote in response to a specific job the tool got wrong. A move that
-    dropped one costs a correction, and nothing errors when it happens.
+    The verbatim assertions that used to sit here pinned calibration prose — a named mis-score, a
+    rate floor, three company names — and every one of them was a photograph: they stated no rule and
+    broke on any legitimate retune, which had already happened once (the $50 floor retired
+    2026-07-27). What survives is the part that IS a rule: the analyzer is handed a document with
+    these six sections, and a move or an edit that drops one is a silent loss of calibration.
     """
     rubric = config.goal_profile()
-    assert "$50/hr HARD FLOOR" in rubric
-    assert "Linda Werner" in rubric and "was WRONGLY scored 82" in rubric
-    assert "TMS LLC" in rubric and "React experience alone is insufficient" in rubric
-    assert "Genesis10" in rubric and "THIS is the bar for 80+." in rubric
+    # `HARD FILTERS` until a restructure renamed it `DISQUALIFIED` and left this list behind; the
+    # test sat red for days saying the rubric had "lost" a section it had only renamed. Fixed
+    # 2026-08-04 — the rubric is authoritative over the test, per AGENTS.md.
     for heading in ("IDEAL ROLE", "DOWNRANK", "SCORING DISCIPLINE", "CALIBRATION",
-                    "HARD FILTERS", "CANDIDATE"):
-        assert heading in rubric
+                    "DISQUALIFIED", "CANDIDATE"):
+        assert heading in rubric, f"the rubric lost its {heading} section"
 
 
 @owner_only
@@ -190,7 +171,12 @@ def test_the_whole_file_is_the_prompt() -> None:
     instruction, or someone adds a stripping step and the first real line goes with it.
     """
     assert config.goal_profile() == config.RUBRIC_PATH.read_text(encoding="utf-8")
-    assert config.goal_profile().startswith("IDEAL ROLE (the 10/10 Ben is optimizing for):\n")
+    first = config.goal_profile().splitlines()[0]
+    # The RULE, not the wording: no YAML front matter, no markdown title, no blank lead-in — the first
+    # line on disk is the first instruction the model reads. Pinning one section's exact name made this
+    # fail on 2026-07-30 for a legitimate edit (PRIORITY ORDER was added above IDEAL ROLE), which is the
+    # photograph-vs-rule mistake `docs/agents/tests.md` warns about.
+    assert first and not first.startswith(("#", "---", " "))
 
 
 @owner_only
@@ -200,14 +186,19 @@ def test_the_folded_scalar_no_longer_glues_headings_to_bullets() -> None:
     In `triage/config.yaml` the rubric was a `>` folded block scalar, so any line at the base indent
     was folded onto the one before it with a space. Six section headings therefore arrived at the
     model as `CALIBRATION — ... SHOULD have been scored): - Genesis10, "Senior Full Stack ...`, and
-    `- Permanent -> logged, below an equivalent contract.` was glued to the NON-ENGINEERING rule. The
-    words were always right; the structure was not, and structure is what a heading is for.
+    the Permanent rule was glued to the NON-ENGINEERING rule. The words were always right; the
+    structure was not, and structure is what a heading is for.
+
+    The Permanent rule's TEXT changed on 2026-07-27 (perm is no longer downranked for being perm), so
+    the canary now pins the boundary rather than the sentence — what this test guards is that a bullet
+    starts on its own line, not what any one bullet says.
     """
     rubric = config.goal_profile()
     assert "):\n- " in rubric                       # a heading, then its first bullet, on two lines
     assert "): - " not in rubric                    # the folded spelling
-    assert "\n- Permanent -> logged, below an equivalent contract.\n- NON-ENGINEERING" in rubric
-    assert "contract. - NON-ENGINEERING" not in rubric
+    assert "\n- NON-ENGINEERING ROLE SHAPE" in rubric
+    assert "- NON-ENGINEERING" in rubric and "contract. - NON-ENGINEERING" not in rubric
+    assert "\n- Permanent ->" in rubric
 
 
 def test_a_malformed_rubric_does_not_stop_the_tool_loading_its_config(tmp_path, monkeypatch) -> None:

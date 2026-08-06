@@ -263,6 +263,22 @@
           "description": "Local / self-hosted / proxy endpoint. Omit for the provider's own.",
           "title": "Base Url"
         },
+        "cli_roles": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model roles (the keys under `models:`) routed through the Claude Code CLI instead of `provider`, so they bill to a Claude subscription rather than an API key. Empty or unset = every role uses `provider`. Per-role rather than global because cost is concentrated in `analyze` while call VOLUME is not, and a subscription has a rate limit where an API key has a bill.",
+          "title": "Cli Roles"
+        },
         "structured_method": {
           "anyOf": [
             {
@@ -275,6 +291,26 @@
           "default": null,
           "description": "How the response schema is bound. Leave unset on Anthropic: `json_schema` is what makes the request byte-identical to the native call it replaced.",
           "title": "Structured Method"
+        },
+        "effort": {
+          "anyOf": [
+            {
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How hard the model thinks, and the dominant cost lever: billing is output-token dominated and effort is what sets output length. Unset = the provider's own default (`high` on Anthropic). Dropped with a warning on a provider that does not declare support, the same way `thinking` is.",
+          "title": "Effort"
         }
       },
       "title": "LLMSettings",
@@ -369,6 +405,32 @@
           "default": null,
           "description": "Cheap screen: is this worth an analyze call?",
           "title": "Prefilter"
+        },
+        "cv_parse": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Mechanical: a posting into the keyword/pitch brief a tailored CV is written against.",
+          "title": "Cv Parse"
+        },
+        "cv_review": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Judgment: grades a rendered CV against that brief as a screener would. Sees only the two.",
+          "title": "Cv Review"
         }
       },
       "title": "ModelSettings",

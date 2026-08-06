@@ -11,6 +11,9 @@ daily pipeline quietly becomes a library the monthly report depends on. That was
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "A leaf may import `core/`; a leaf never imports another leaf; `core/` imports nothing local."
 import ast
 from pathlib import Path
 

@@ -21,6 +21,16 @@ Two consequences that shaped the format:
   * **No JD text.** Precedents are for consistency of *reasoning*, not for copying scores, and three
     JDs would be ~4k tokens of un-cached prompt on every scored job.
 
+**A rubric change dates the corpus, and nothing detects that.** When `profile/rubric.md` opened the
+funnel to onsite and relocation (`e4d9a8f`), 348 of the 1,213 scored judgments in the index — 28% —
+already carried a rationale capping a job *for its location*, in the scorer's own voice. The
+precedence rule defends against a precedent claiming **authority**; it does nothing about three of
+them **anchoring** on a dimension the rubric has since reversed. So the preamble names the
+supersession outright. That line is a stopgap with a shelf life: it decays as new-rubric decisions
+accumulate, and the durable fix is stamping each decision with the rubric version that produced it
+and preferring current-version precedents — worth building only once an eval shows retrieval earns
+its tokens at all, which has not been measured.
+
 Everything here fails soft. A missing index, a missing model, a corrupt file: `for_job` returns `""`
 and the job is scored exactly as it is today. Day one for a stranger with no history is the same
 code path as a broken index, and neither blocks the morning run.
@@ -52,6 +62,11 @@ _PREAMBLE = (
     "the rubric; these are retrieved and merely probable. Where a precedent conflicts with a rule, "
     "a hard gate or a calibration case in the goal profile, THE RULE WINS and the precedent is "
     "simply a past mistake — some of these ARE past mistakes, which is why those rules exist.\n"
+    "  * SUPERSEDED RULE — LOCATION. The goal profile now accepts onsite, hybrid and relocation "
+    "anywhere in the US and does NOT downrank for location. Most of these precedents were scored "
+    "under the previous remote-preferred rule and capped a job for being onsite, hybrid or "
+    "requiring a move; that reasoning is retired. Ignore it and judge location by the goal profile "
+    "above alone.\n"
     "  * Use them for consistency of REASONING, not to copy a score. Do not regress toward whatever "
     "you happened to say about a similar job before.\n"
     "  * They are the standing record of what disqualified similar roles — a mandatory-tech gap, a "

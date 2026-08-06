@@ -1,4 +1,4 @@
-"""Applied-jobs dedup cache (full reference: docs/operating/triage-applied-sync.md).
+"""Applied-jobs dedup cache (full reference: docs/operating/triage.md).
 
 Ben logs every application in a Google Sheet — free-form and messy (company often blank; the title lands
 in whichever column he pasted into; identity sometimes only inferable from the link domain). `/sync-applied`
@@ -24,12 +24,20 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from .config import CORPUS_DIR
+from . import config
 from core.models import composite_id, normalize_link as _normalize_link
 
 log = logging.getLogger("triage.applied")
 
-APPLIED = CORPUS_DIR / "applied.json"
+def applied_path():
+    """Resolved per call, never bound at import — the same rule as `store.seen_path()`.
+
+    A module-level `APPLIED = CORPUS_DIR / "applied.json"` froze the real corpus path into this module,
+    so a test redirecting `config.CORPUS_DIR` at a temp directory redirected the readers and not the
+    writer, and any test that forgot the second monkeypatch wrote the owner's live applied cache.
+    `config.CORPUS_DIR` is the single knob for both files.
+    """
+    return config.CORPUS_DIR / "applied.json"
 AUTO_BLOCK = {"high", "medium"}   # confidences that silently dedup; "low" is held for review only
 
 
@@ -79,7 +87,7 @@ def sync_from_rows(rows: list[dict]) -> dict:
     """Rebuild applied.json from Claude's normalized rows. The SHEET is the source of truth, so this fully
     REPLACES the cache each run (no stale rows survive an edit). Returns a summary for the caller to show."""
     records = [_build(r) for r in rows if any(r.get(k) for k in ("company", "title", "url"))]
-    APPLIED.write_text(json.dumps([r.model_dump() for r in records], indent=2))
+    applied_path().write_text(json.dumps([r.model_dump() for r in records], indent=2))
     return {
         "records": len(records),
         "block_keys": len({k for r in records if r.confidence in AUTO_BLOCK for k in r.keys()}),
@@ -93,7 +101,7 @@ def sync_from_rows(rows: list[dict]) -> dict:
 
 def load_records() -> list[AppliedRecord]:
     try:
-        return [AppliedRecord(**d) for d in json.loads(APPLIED.read_text())]
+        return [AppliedRecord(**d) for d in json.loads(applied_path().read_text())]
     except (OSError, ValueError):
         return []
 

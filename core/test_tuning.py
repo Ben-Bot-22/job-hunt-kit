@@ -26,6 +26,9 @@ knobs live in `triage/` and `research/`. Pure file reads: no network, no key, no
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "`tuning.md` still describes the numbers the code actually uses."
 import re
 from pathlib import Path
 

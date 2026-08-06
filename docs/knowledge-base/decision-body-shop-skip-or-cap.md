@@ -1,4 +1,4 @@
-# ADR 0001 — Body-shop postings: hard skip, or a scored cap?
+# Decision — Body-shop postings: hard skip, or a scored cap?
 
 **Date:** 2026-07-22
 **Status:** Accepted, with a scheduled revisit

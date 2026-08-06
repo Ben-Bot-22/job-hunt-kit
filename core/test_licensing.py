@@ -22,6 +22,9 @@ imported, because `core/` may not import a leaf (`core/test_layering.py`).
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "Every attributed source reaches both the registry and `NOTICE`, and no `CONTRIBUTING.md` exists."
 import re
 from pathlib import Path
 

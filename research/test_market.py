@@ -15,7 +15,7 @@ The failure directions this file is shaped around, in the order they would cost 
   * **history not accumulating.** A trend in October is made of files written in July. If a run
     overwrites the previous month's numbers, or files them under the wrong name, the feature can
     never start — and nothing observable goes wrong today.
-  * **the human narrative being overwritten.** `profile/notes/market-insights.md` is the 10% a person
+  * **the human narrative being overwritten.** `docs/knowledge-base/personal/market/market-insights.md` is the 10% a person
     had to write; this command writes only into `data/reports/`.
 """
 from __future__ import annotations

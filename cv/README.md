@@ -26,7 +26,7 @@ profile/cv-base.docx              # source of truth: YOUR résumé, edited in pl
                                   # structure render_cv anchors on — copy it over to try the demo.
 profile/bullet-bank.md            # verified, evidence-backed bullets — the ONLY source for claims.
                                   # Superset of the base docx + prior PDFs + code-mined accomplishments.
-profile/notes/tailoring-playbook.md  # reusable STRATEGY: what to emphasize, per-target playbooks (e.g.
+docs/knowledge-base/personal/tailoring-playbook.md  # reusable STRATEGY: what to emphasize, per-target playbooks (e.g.
                                   # Braintrust), general principles, the Founder-framing rule. Read first.
 
 applications/                     # per-application outputs (gitignored):

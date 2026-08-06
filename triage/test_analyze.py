@@ -112,6 +112,66 @@ def test_the_jd_is_capped():
     assert user.count("x") == analyze._MAX_JD
 
 
+# --- the prompt must not contradict the rubric it carries -------------------------------------------
+#
+# `_system()` is the rubric injected whole PLUS hardcoded scoring rules, in one block. So a rule that
+# drifts from the rubric does not merely go stale — it argues with the rubric, in the same prompt, and
+# the model picks. All four of these were live on 2026-07-30; see
+# `docs/knowledge-base/decision-work-life-balance-priority.md`.
+#
+# They carry NO marker, deliberately: what they assert is the HARDCODED half of the prompt, which is a
+# rule about this repo's code and therefore has to run on a stranger's clone too (docs/agents/tests.md).
+# The rubric they are checked against is the owner's and does not ship, so `goal_profile` is stubbed
+# with a placeholder — the hardcoded text is byte-identical either way, and stubbing is the pattern
+# `_system`'s own docstring names. Without this the $40-floor guard, the one that caught a live
+# hard-filter bug, did not run on an unseeded clone at all.
+
+@pytest.fixture
+def hardcoded_system(monkeypatch):
+    """`_system()` built without needing a rubric on disk — the hardcoded scoring rules alone.
+
+    The placeholder is deliberately inert: it must contain none of the strings these tests look for,
+    or a rubric-shaped stub would start answering for the code under test.
+    """
+    analyze._system.cache_clear()
+    monkeypatch.setattr(analyze.config, "goal_profile", lambda: "(goal profile omitted for this test)")
+    yield analyze._system()
+    analyze._system.cache_clear()
+
+
+def test_the_hard_rate_floor_matches_the_rubric(hardcoded_system):
+    """The rubric says $40 and it is authoritative. At $50 this line was hard-filtering the whole
+    $40-50 band the rubric calls a demotion, so those jobs never reached the page at all."""
+    assert "< $40/hr" in hardcoded_system
+    assert "clearly < $50/hr" not in hardcoded_system
+
+
+def test_intensity_no_longer_sets_the_verdict(hardcoded_system):
+    """Work-life balance is priority #2, and one verdict bucket is what "rate not posted" used to cost.
+    Intensity leaves the ranked list via `held_back_reason` now; pricing it as a soft miss as well
+    would demote the job twice for one thing. Both buckets it could land in are checked: it was in
+    FIT as a soft miss, and it was a CONDITION on STRONG_FIT, which is the same rule stated upward."""
+    system = hardcoded_system
+    for bucket in ("STRONG_FIT (80-95)", "FIT (60-79)"):
+        line = system.split(bucket)[1].split("\n")[0]
+        assert "intensity" not in line.lower(), f"{bucket} still prices intensity"
+
+
+def test_an_unposted_rate_is_not_a_soft_miss(hardcoded_system):
+    """73% of postings carry no rate at all. Demoting on it measured our scraping, not the market — and
+    requiring "a known/credible rate" for STRONG_FIT was the same rule wearing the other face."""
+    system = hardcoded_system
+    assert "rate unknown" not in system.split("FIT (60-79)")[1].split("\n")[0]
+    strong = system.split("STRONG_FIT (80-95)")[1].split("LOW_FIT")[0]
+    assert "known/credible rate" not in strong
+
+
+def test_the_scorer_is_asked_to_quote_the_intensity_tell(hardcoded_system):
+    """Intensity is inferred from prose, so an unquoted 5 is unauditable — and the reader's whole job
+    in the review section is to decide whether to overrule it."""
+    assert "QUOTE" in hardcoded_system and "held_back_reason" in hardcoded_system.lower()
+
+
 # --- the call site ---------------------------------------------------------------------------------
 
 @needs_rubric

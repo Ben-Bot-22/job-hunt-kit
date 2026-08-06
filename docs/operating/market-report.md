@@ -16,7 +16,7 @@ Two files come out, both under `data/reports/`, both dated:
 |---|---|---|
 | `market-numbers-<date>.json` | **the machine** | the numbers, flat and accumulating. What the next run's trend section reads, and what a narrative cites. |
 | `market-report-<date>.md` | **the machine** | the rendered document — two halves, every section stamped with its sample size and window. |
-| `profile/notes/market-insights.md` | **you** | the judgment. **Nothing generated ever overwrites it.** |
+| `docs/knowledge-base/personal/market/market-insights.md` | **you** | the judgment. **Nothing generated ever overwrites it.** |
 
 ## A separate command, not a flag on the daily run
 
@@ -47,7 +47,7 @@ pays" in a call is the specific damage this report exists to prevent.
 
 ## The citing convention — follow this rather than pasting numbers
 
-`profile/notes/market-insights.md` is **human/agent-authored narrative**. The ~90% of it that is
+`docs/knowledge-base/personal/market/market-insights.md` is **human/agent-authored narrative**. The ~90% of it that is
 mechanically derivable is exactly the part that goes stale (it was 26 days out of date when this was
 built); that part is now generated. The remaining 10% is judgment, and an LLM-written "what this
 means" section is precisely where a confidently wrong rate claim would do real damage. So:

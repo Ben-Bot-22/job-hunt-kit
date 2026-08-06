@@ -8,7 +8,18 @@ IDEAL ROLE (the 10/10 Robin is optimizing for):
   below that = SKIP).
 - MODERATE INTENSITY (1-3 on a 1-5 scale): a normal week, a real on-call rotation or none at all.
   Protected time: evenings, a Tuesday climbing session, and an open-source React component library
-  Robin maintains. NO "wear many hats" solo-ownership of production paging, NO travel above ~10%.
+  Robin maintains.
+  **Intensity SORTS, it does not EXCLUDE.** An on-call rotation, incident response, sprints and
+  deadlines are ordinary conditions of employment — a 4 or 5 ranks the role below an equal-fit
+  sane-hours one and puts the quoted phrase on its line, and that is all it does. Write down which
+  demands actually cross YOUR line; everything else is a job being a job.
+  **TRAVEL THRESHOLD: 10%.** More than that, stated in the posting, sets `held_back_reason: "travel"`
+  and the role leaves the ranked list into the review section — still linked, still readable, still
+  something Robin can pull back in. *(This number is the one the analyzer reads; change it here and
+  the tool changes with it.)*
+  **HELD BACK on `intensity`, and nothing milder:** a posting claiming the whole person — "passion,
+  not counting hours", "we work hard here", "wear many hats" solo-ownership of production paging, an
+  employer whose own work-life rating is bottom-quartile, or a loop promising an offer within a week.
 - IN-LANE SKILLS: TypeScript and JavaScript, React (hooks, React Query, a component library Robin has
   actually maintained), Node.js (Express, some Nest), Python (FastAPI and Django) behind it, PostgreSQL
   and SQL that Robin writes rather than generates, REST and GraphQL APIs, AWS (ECS, RDS, S3, Lambda),
@@ -74,19 +85,8 @@ HARD FILTERS (verdict = SKIP): non-US; posted salary band whose top is clearly b
 contract rate below $60/hr; primary stack
 not Robin's (.NET-primary, Java-primary, native-mobile-only, Rails-primary, data-engineering-only);
 requires an active security clearance; JD hard-requires a primary language or platform Robin lacks (e.g.
-"production Go required", "must have owned Kubernetes in production"); BODY SHOP — see below.
+"production Go required", "must have owned Kubernetes in production").
 
-BODY SHOP (verdict = SKIP) — key on the TELLS, NEVER on "is this a staffing firm". A recruiter or
-staffing agency posting a real, named client req is a NORMAL posting and must NOT be skipped; for many
-job seekers that is the fastest channel there is. Skip only on the tells themselves — any ONE is enough:
-"Any Visa" / "any workable visa", or a work-authorization line dealing in EAD categories (OPT-EAD,
-GC-EAD, H4EAD) — a direct employer saying it will not sponsor H-1B is the opposite of this tell;
-local-driver's-licence-only, or a demand for a DL / passport-number / last-4-SSN copy up front; a vendor
-that will not name the client at all ("Client: To Be Discussed Later"), as distinct from an agency
-describing it generically ("a Fortune 500 logistics company"), which is fine. Two or more of these WEAK
-tells together also skip, one alone does not: recruiter-req boilerplate ("Mode of Interview", "share
-your updated resume"), people described as "resources", an in-person-only interview, "local candidates
-only". In-person-only alone is a plain onsite employer, not a body shop.
 
 CANDIDATE: full-stack developer, ~4 years, TypeScript-primary, shipping React front ends and the
 Node/Python APIs behind them at a mid-size logistics company; owns a customer-facing dashboard end to

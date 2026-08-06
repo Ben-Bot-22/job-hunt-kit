@@ -455,17 +455,37 @@ def render(base: Path, plan: dict, out: Path) -> None:
 
 
 def to_pdf(docx_path: Path) -> Path:
-    """Convert to PDF via headless LibreOffice for faithful Word rendering."""
+    """Convert to PDF via headless LibreOffice for faithful Word rendering.
+
+    The previous PDF is removed FIRST, and that is the whole point of this function's
+    shape. `soffice --convert-to` exits 0 without writing anything when another headless
+    instance already holds the profile lock — routine under `/tailor-cv-batch`, where N
+    agents render at once. Guarding on `pdf.exists()` alone therefore passes on the
+    *previous* render, and the blind grader goes on to score a document that no longer
+    exists: on 2026-07-30 two agents independently caught it grading text they had already
+    deleted, one against a PDF 46 seconds stale.
+
+    Unlinking first turns that silent wrong answer into a loud failure. It is the same
+    class of defect as the scraper rot in `core/scrapers/` — the tool returning something
+    plausible instead of raising — and the same remedy: make the failure impossible to
+    mistake for a result.
+    """
     soffice = _find_soffice()
     if not soffice:
         raise RuntimeError("LibreOffice (soffice) not found; install it or omit --pdf")
+    pdf = docx_path.with_suffix(".pdf")
+    pdf.unlink(missing_ok=True)
     subprocess.run(
         [soffice, "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)],
         check=True, capture_output=True, text=True,
     )
-    pdf = docx_path.with_suffix(".pdf")
     if not pdf.exists():
-        raise RuntimeError("PDF conversion did not produce a file")
+        raise RuntimeError(
+            f"PDF conversion produced no file for {docx_path.name}. soffice exited 0 and wrote "
+            "nothing, which usually means another headless LibreOffice instance holds the lock "
+            "(close LibreOffice, or serialise concurrent renders) — the stale PDF was removed "
+            "rather than left to be graded as if it were current."
+        )
     return pdf
 
 

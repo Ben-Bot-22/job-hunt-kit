@@ -33,3 +33,6 @@ scratch/
 data/
 matches/
 applications/
+
+# Tickets and work-in-flight — local only, never tracked.
+.scratch/

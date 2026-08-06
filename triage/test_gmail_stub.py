@@ -19,6 +19,9 @@ absence*, and the failure directions are not symmetric:
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "The `gmail` channel stays off — the stub raises rather than returning an empty list that reads as a quiet inbox."
 import pytest
 
 from . import channels, config

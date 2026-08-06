@@ -1,4 +1,4 @@
-"""Dedup state — three sources (triage-plan §5; applied-sync: docs/operating/triage-applied-sync.md).
+"""Dedup state — three sources (triage-plan §5; applied-sync: docs/operating/triage.md).
 
   seen.json    : ids already analyzed (auto; don't re-analyze across runs — saves API + LinkedIn fetches).
   skiplist.md  : ids Ben applied to / rejected (hand-edited; never surface again).
@@ -11,20 +11,34 @@ from __future__ import annotations
 
 import json
 
-from .config import CORPUS_DIR, SKIPLIST
+from . import config
+from .config import SKIPLIST
 
-SEEN = CORPUS_DIR / "seen.json"
+
+def seen_path():
+    """Resolved on every call, not bound at import.
+
+    `SEEN = CORPUS_DIR / "seen.json"` at module scope froze the real corpus path into this module the
+    moment it was imported, so a test redirecting `config.CORPUS_DIR` at a temp directory redirected
+    the readers and not the writer. `triage/test_merge.py` did exactly that and wrote three fixture
+    ids into the owner's live `data/corpus/seen.json` — and, on a fresh clone, created a `data/`
+    directory that made `triage/test_paste.py` fail. The corpus is a month of accumulated judgments;
+    nothing in the suite may be able to touch it by accident.
+    """
+    return config.CORPUS_DIR / "seen.json"
 
 
 def load_seen() -> set[str]:
     try:
-        return set(json.loads(SEEN.read_text()))
+        return set(json.loads(seen_path().read_text()))
     except (OSError, ValueError):
         return set()
 
 
 def save_seen(ids: set[str]) -> None:
-    SEEN.write_text(json.dumps(sorted(ids), indent=0))
+    path = seen_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(ids), indent=0))
 
 
 def load_skiplist() -> set[str]:

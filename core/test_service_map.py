@@ -20,12 +20,16 @@ may not import a leaf (`core/test_layering.py`). No network, no key.
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "`systems.md`, `services.md` and `data-map.md` name every system, workflow, channel, source, scraper, provider and directory the tool actually has."
 import re
 from pathlib import Path
 
 from core.llm import PROVIDERS
 
 ROOT = Path(__file__).resolve().parent.parent
+SYSTEMS = ROOT / "docs" / "operating" / "systems.md"
 SERVICES = ROOT / "docs" / "operating" / "services.md"
 DATA_MAP = ROOT / "docs" / "operating" / "data-map.md"
 README = ROOT / "README.md"
@@ -116,8 +120,45 @@ def test_the_data_map_covers_every_directory_the_tool_creates() -> None:
     assert "disposable" in doc and "data/corpus/" in doc
 
 
-def test_both_pages_are_reachable_from_the_readme() -> None:
+def test_the_systems_map_names_every_package_and_every_workflow() -> None:
+    """`systems.md` is loaded every session (`CLAUDE.md` imports it), so a gap in it misdirects work.
+
+    It answers "which system am I in, and what is its anchor?" — the question the other two pages do
+    not. That only holds while it is complete: a package it does not name is a capability an agent
+    concludes does not exist, and a workflow it omits is one that gets rebuilt beside itself. Both
+    have happened here.
+
+    Inventories only. The prose, the diagram and the seams are judgments and a test over them would
+    be satisfied by filler.
+    """
+    from core.test_portable_workflows import OWN  # the single list of this repo's own workflows
+
+    text = SYSTEMS.read_text(encoding="utf-8")
+    ticks = _backticked(text)
+
+    packages = sorted(
+        p.name for p in ROOT.iterdir()
+        if p.is_dir() and (p / "__init__.py").exists() and not p.name.startswith(".")
+    )
+    assert packages, "no Python packages found at the repo root — has the layout changed?"
+    for pkg in packages:
+        assert any(t == pkg or t.startswith(f"{pkg}/") for t in ticks), (
+            f"docs/operating/systems.md never names the `{pkg}/` package. Every system and the shared "
+            f"floor under them belong on the map — see its §1 table."
+        )
+
+    for skill in OWN:
+        assert f"/{skill}" in text, (
+            f"docs/operating/systems.md does not name the /{skill} workflow. A workflow missing from "
+            f"the map is one an agent rebuilds beside itself."
+        )
+
+    for anchor in ("profile/rubric.md", "profile/bullet-bank.md", "config/settings.yaml"):
+        assert anchor in text, f"systems.md must name {anchor} as the anchor of the system that reads it"
+
+
+def test_all_three_pages_are_reachable_from_the_readme() -> None:
     """A doc nobody links is a doc nobody reads; the README is the only front door a stranger has."""
     readme = README.read_text(encoding="utf-8")
-    for page in ("docs/operating/services.md", "docs/operating/data-map.md"):
+    for page in ("docs/operating/systems.md", "docs/operating/services.md", "docs/operating/data-map.md"):
         assert page in readme, f"{page} is not linked from the README"

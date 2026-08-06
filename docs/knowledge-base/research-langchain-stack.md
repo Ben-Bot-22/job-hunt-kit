@@ -9,6 +9,12 @@ capped; (3) contain scope; (4) two audiences.**
 Researched 2026-07-21 against primary sources (official docs, pricing pages, PyPI metadata, LICENSE
 files, SDK source, HuggingFace model cards). Install footprints were **measured locally**, not estimated.
 
+> **Reading this against today's code (added 2026-07-30).** Written before the `core/` extraction, so the
+> call sites it names have moved. The **measurements and conclusions are unchanged** — only the addresses:
+> `triage/ingest.py` is now **`triage/channels/mail.py`** (Apple Mail) plus **`triage/channels/common.py`**,
+> and the single generation path it argues for was subsequently built as **`core/llm.py`**, which cites
+> this document. Verify a claim against the new path rather than concluding the call site is gone.
+
 ---
 
 ## TL;DR
@@ -346,7 +352,7 @@ Grounding the scale question in real numbers from this repo:
 
 - 6 `state-*.json` run files at roughly 350 scored jobs each → **~2,000 scored job records**
 - `profile/bullet-bank.md`: 359 lines
-- `docs/operating/*.md` + `profile/notes/*.md`: 4,100 lines total
+- `docs/operating/*.md` + `docs/knowledge-base/personal/*.md`: 4,100 lines total
 
 Even with aggressive chunking, the corpus is **low single-digit thousands of short documents**. That
 number matters enormously for the index decision below.

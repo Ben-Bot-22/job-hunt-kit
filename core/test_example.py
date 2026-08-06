@@ -21,13 +21,16 @@ Everything here is offline. The failure directions, in the order they cost somet
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "The shipped example is a fictional seeker, and it is the fixture the suite runs against."
 from pathlib import Path
 
 import pytest
 import yaml
 
 from .example import DESTINATIONS, EXAMPLE_DIR, seed
-from .settings import (CONFIG_HOME_ENV, PROFILE_DIR, REPO_ROOT, SETTINGS_PATH, Settings, profile_exists,
+from .settings import (CONFIG_HOME_ENV, OWNED_BY_CODE, PROFILE_DIR, REPO_ROOT, SETTINGS_PATH, Settings, profile_exists,
                        is_example_profile, load, validate)
 
 #: Two tests below diff the example against the REPO OWNER's real `profile/profile.yaml`. That file is
@@ -40,6 +43,11 @@ needs_owner_profile = pytest.mark.skipif(
            "by design. Seed a profile with `python -m core.example` to run the rest of the suite.")
 
 EXAMPLE_SETTINGS = EXAMPLE_DIR / "settings.yaml"
+
+# `models:` earned its place in OWNED_BY_CODE on 2026-08-06: it was the one setting with no code-side
+# default, so every settings file had to restate every id, and the example's copy drifted from the
+# owner's — shipping new users a model nobody had chosen. Defaults are `core.settings.DEFAULT_MODELS`;
+# naming a role in a settings file still overrides them.
 EXAMPLE_PROFILE = EXAMPLE_DIR / "profile.yaml"
 EXAMPLE_RUBRIC = EXAMPLE_DIR / "rubric.md"
 
@@ -90,9 +98,11 @@ def test_the_example_names_a_value_for_every_top_level_setting() -> None:
 
     A stranger who cannot see `liveness:` in the file they were given does not learn it exists; the
     schema is the reference, but nobody reads the reference first.
+
+    `models:` is the one exception, and it runs the other way — see `OWNED_BY_CODE`.
     """
     data = load(EXAMPLE_SETTINGS)
-    assert set(data) == set(Settings.model_fields)
+    assert set(data) == set(Settings.model_fields) - OWNED_BY_CODE
 
 
 @needs_owner_profile

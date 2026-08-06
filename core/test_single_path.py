@@ -23,6 +23,9 @@ escape hatch.
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "There is exactly one generation path — `core/llm.py` is the only place a model client is built or called."
 import ast
 from pathlib import Path
 

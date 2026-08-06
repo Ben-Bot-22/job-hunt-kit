@@ -12,7 +12,7 @@ One shape — targets are always positional, and the two other jobs are flags on
 
     python -m research --answer "TEKsystems" < answers.md   fold answers into the cached brief
 
-Flags rather than subcommand verbs, deliberately (see `docs/operating/research-company.md`): a
+Flags rather than subcommand verbs, deliberately: a
 company is a free-text string, so a bare verb in the first position is ambiguous with a company
 literally named "tool", and verbs parsed off `argv` ahead of argparse silently ignore `--cache-dir`.
 

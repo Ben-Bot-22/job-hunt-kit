@@ -128,8 +128,6 @@ def _run_example_phase1(tmp_path: Path, monkeypatch) -> tuple[Path, list]:
     # --- a fresh clone's empty working memory, not this machine's month of judgments ---------------
     monkeypatch.setattr(config, "RUNS_DIR", tmp_path / "runs")
     monkeypatch.setattr(config, "CORPUS_DIR", tmp_path / "corpus")
-    monkeypatch.setattr(store, "SEEN", tmp_path / "corpus" / "seen.json")
-    monkeypatch.setattr(applied, "APPLIED", tmp_path / "corpus" / "applied.json")
     monkeypatch.setattr(main, "_LATEST", tmp_path / "runs" / "latest-run.txt")
     (tmp_path / "runs").mkdir()
     (tmp_path / "corpus").mkdir()

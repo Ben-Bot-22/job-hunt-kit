@@ -23,6 +23,9 @@ not import a leaf.
 """
 from __future__ import annotations
 
+
+#: One line for the rule index — see `core/rules.py`.
+RULE = "`/setup` shows the channel menu before anything is fetched."
 import re
 from pathlib import Path
 

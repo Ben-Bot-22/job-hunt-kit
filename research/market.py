@@ -16,7 +16,7 @@ Two files come out of every run, both under `data/reports/`:
     a later run's trend section reads, and it is the file a narrative cites.
   * `market-report-<date>.md` — the rendered document for a human.
 
-**Nothing here writes prose.** `profile/notes/market-insights.md` (or a stranger's equivalent) is
+**Nothing here writes prose.** `docs/knowledge-base/personal/market/market-insights.md` (or a stranger's equivalent) is
 human/agent-authored judgment and this command never touches it — see `docs/operating/market-report.md`
 for the citing convention that keeps the two joined. The ~90% of that document which is mechanically
 derivable is what goes stale; the remaining 10% is the reason it exists, and an LLM-written "what this

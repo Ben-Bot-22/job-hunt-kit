@@ -1,17 +1,11 @@
 # config/settings.yaml — HOW THE TOOL RUNS. These are the shipped defaults, tuned for a first
 # run: the two channels that need no key are on, the two that need something you do not have
-# yet are off. Edit freely — or run `python -m core.setup`, which writes this file for you.
+# yet are off, and the concurrency is low enough not to earn a rate-limit on your first
+# afternoon. Edit freely — or run `python -m core.setup`, which writes this file for you.
 #
-# A complete, valid operational config, tuned for a first run rather than for a tuned instance: the two
-# channels that need no key are on, the two that need something a stranger does not have are off, and
-# the concurrency is low enough not to earn a rate-limit on someone's first afternoon.
-#
-# Point the whole tool at this directory — settings AND identity — with one environment variable:
-#
-#     JOBSDB_CONFIG_HOME=config/example .venv/bin/python -m triage --paste <a job URL>
-#
-# Validated on load by core/settings.py, exactly like the real file. The machine-readable form of every
-# key below is ../settings.schema.json.
+# Validated on load by core/settings.py: a misspelled key is an error naming the key, not a silent fall
+# back to a default. The machine-readable form of every key below is `settings.schema.json`, beside it —
+# the line under this one wires it into your editor.
 # yaml-language-server: $schema=./settings.schema.json
 
 llm:
@@ -20,10 +14,24 @@ llm:
   # its key goes in `.env` at the repo root and nowhere else.
   provider: anthropic
 
-models:
-  analyze: claude-opus-4-8     # JUDGMENT: fit + ranking per JD. The expensive one, and the one that matters.
-  extract: claude-sonnet-5     # MECHANICAL: pull jobs out of an email or a pasted page.
-  prefilter: claude-sonnet-5   # CHEAP SCREEN: is this worth an analyze call at all?
+  # OPTIONAL, AND OFF: bill some roles to a Claude subscription instead of an API key. Roles named
+  # here run through the Claude Code CLI (`claude -p`), which uses its own stored login, so they cost
+  # a rate limit rather than money; every role not named keeps using `provider` above. Needs `claude`
+  # on PATH and signed in — with this line commented out, the tool is API-only and needs no CLI.
+  #
+  # `analyze` is the one worth moving first: it is a minority of the calls and the majority of the
+  # spend. The cheap high-volume roles are better left on the API, because a subscription rate limit
+  # is shared with whatever else you use Claude Code for.
+  # cli_roles: [analyze]
+
+# NO `models:` BLOCK HERE, DELIBERATELY. Which model each role runs on is a fact about the tool, not a
+# choice this fictional seeker made, so it lives in ONE place — `core/settings.DEFAULT_MODELS` — and any
+# settings file that stays silent inherits it. This file used to restate all five ids, they drifted from
+# the owner's real config, and every new user got a default nobody had chosen. `core/test_settings.py`
+# keeps this file silent about them. Naming a role here still overrides it, which is how you switch
+# provider or try a cheaper model:
+#   models:
+#     analyze: claude-sonnet-5
 
 # A week rather than three days: a first run wants enough board postings to be worth reading, and there
 # is no inbox backlog here to keep small.

@@ -16,7 +16,7 @@ So the failure direction these tests protect against is a silent one: a `langcha
 that changes the default, the payload shape, or the failure mode, landing as a scoring drift nobody
 can attribute. Offline — an httpx MockTransport, no key, no network, no spend.
 
-Findings and measurements: `docs/research/structured-output-spike.md`.
+Findings and measurements: `docs/knowledge-base/research-structured-output.md`.
 Run:  .venv/bin/python -m pytest core/test_structured_output.py -q
 """
 from __future__ import annotations

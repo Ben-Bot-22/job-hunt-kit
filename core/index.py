@@ -14,7 +14,7 @@ Two corpora, two rules:
   * **Markdown is chunked on its heading hierarchy**, carrying the full heading path as metadata, so
     a retrieved chunk is citable rather than anonymous.
 
-**The markdown half is deliberately dormant — the index holds job decisions only.** `profile/notes/`
+**The markdown half is deliberately dormant — the index holds job decisions only.** `docs/knowledge-base/personal/`
 is not indexed and should not be, because the scorer already reads the goal profile in full on every
 call (`profile/rubric.md`, prompt-cached), so retrieval could only hand it a *slice* of a file it
 already sees whole. Anything from the notes that should affect scoring belongs in the goal profile,

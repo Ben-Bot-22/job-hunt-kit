@@ -25,7 +25,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from core.settings import PROFILE_DIR, ConfigurationError, load as _load_yaml, settings
+from core.settings import PROFILE_DIR, ConfigurationError, load as _load_yaml, model as _model, settings
 
 TRIAGE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TRIAGE_DIR.parent
@@ -82,8 +82,12 @@ def window_days(override: int | None = None) -> int:
 
 
 def model(role: str) -> str:
-    """role = 'analyze' | 'extract' | 'prefilter'."""
-    return cfg()["models"][role]
+    """role = 'analyze' | 'extract' | 'prefilter'. Delegates: `core.settings` owns the defaults.
+
+    Kept as a re-export because this module is where the rest of the package reads its config, and
+    `cv/` calls `core.settings.model()` directly — one definition, two leaves, no duplicate list.
+    """
+    return _model(role)
 
 
 def prefilter_enabled() -> bool:

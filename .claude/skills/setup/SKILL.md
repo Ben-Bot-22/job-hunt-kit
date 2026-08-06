@@ -70,6 +70,11 @@ fictional one as if it were theirs.
 
 ## 3. Mine the bullet bank — and mark what you could not back
 
+**This is the one workflow that writes the bank without asking each time**, because the user is sitting
+here being interviewed about every claim — the approval is the conversation. Once it exists the file is
+**protected**: every later write, in every other workflow, is proposed and waits for their yes. Say so
+when you hand it over, and put the notice at the top of the file you write.
+
 Write `profile/bullet-bank.md` in the shape of the seeded example: identity/summary raw material, one
 section per role or project, and a **DO-NOT-CLAIM** list at the bottom. The format carries the
 evidence:
@@ -131,7 +136,8 @@ a rubric that says $130k to someone who bills hourly is a rubric they will not t
 **DOWNRANK** — shown, ranked lower. This is where most of the user's real opinions live, so ask for
 them rather than reasoning them out: what makes a posting worth seeing but not worth wanting.
 
-**HARD FILTERS** — SKIP outright. Keep the `BODY SHOP` block that ships in the example: it keys on the
+**HARD FILTERS** — SKIP outright. Keep them to facts you can check and be right about (location,
+  a posted rate below the floor, a required clearance, a primary stack they do not have). The example: it keys on the
 tells (concatenated EAD categories, a vendor that withholds the client outright, in-person-only as a
 *corroborating* signal) and never on "is this a staffing firm", because for many people agencies are
 the best supply channel there is. Add the user's own: a clearance they don't have, a stack they refuse.
@@ -263,9 +269,9 @@ down once propagates through every future run that retrieves it.
 
 - **Portable on purpose.** This is a skill rather than a slash command so it works in whichever agent
   the user has. Everything here is plain markdown and shell — read
-  `docs/research/cross-agent-portability.md` before changing that.
+  `docs/knowledge-base/research-cross-agent-portability.md` before changing that.
 - **What this skill must never do:** fetch before step 7 · overwrite a `profile/` file that already
   has real content in it · write a bullet the user hasn't confirmed · send anyone to a Google Cloud
   console · put a key anywhere but `.env`.
 - The full configuration reference is the README's "Making it yours" section; the operational keys are
-  `config/settings.schema.json`; `docs/operating/triage-operating.md` is the runbook once they are set up.
+  `config/settings.schema.json`; `docs/operating/triage.md` is the runbook once they are set up.

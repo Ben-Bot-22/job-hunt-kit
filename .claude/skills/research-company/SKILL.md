@@ -85,9 +85,8 @@ pre-apply check, not a scoring pass.
 
 ## Notes
 
-- Why the CLI is shaped this way, and how the cache keys links: `docs/operating/research-company.md`.
 - **Portable on purpose.** Nothing here needs a particular agent: it is a CLI, plain markdown, and
-  whatever web search you have. Read `docs/research/cross-agent-portability.md` before changing that.
+  whatever web search you have. Read `docs/knowledge-base/research-cross-agent-portability.md` before changing that.
 - Briefs cache as JSON and **do not** feed the retrieval index. That was cut deliberately.
 - The loop is capped at three lookups. If the brief says it stopped at the cap, there may be more to
   find — say so rather than presenting it as complete.

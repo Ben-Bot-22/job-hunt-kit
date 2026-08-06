@@ -236,7 +236,7 @@ def test_the_worklist_reports_what_merged_and_why():
 
 def test_a_collapse_onto_a_skipped_job_is_still_reported():
     """The section is complete, not a view of the top picks. A SKIPped survivor renders in
-    'Rejected / skipped', and its merge would otherwise never be shown at all."""
+    the review section, and its merge would otherwise never be shown at all."""
     from core.models import Analysis
 
     jobs = _collapse([_job("Global Payments Inc.", "AI Engineer", PAYMENTS_JD),
