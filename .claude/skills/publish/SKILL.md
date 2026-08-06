@@ -3,6 +3,11 @@ name: publish
 description: Re-publish the public job-hunt-kit snapshot from this repo — dry-run the extraction, review what changed, cold-clone check, then push. Use when asked to publish, re-extract, update the public repo, or ship changes to job-hunt-kit.
 ---
 
+**Internal to jobs-db.** This skill ships in the public snapshot with the rest of `.claude/skills/`,
+but it is not part of the product and is deliberately absent from the public README's workflow table:
+it drives `scripts/`, which is excluded whole, so every command in it names a file a stranger does not
+have. Leave it out of that table when the table changes.
+
 Re-publish `job-hunt-kit` — the public, one-way snapshot of this repo. `scripts/EXTRACTION.md` is the
 **first-time seeding** procedure (create repo → private → flip to public) and is done. This skill is the
 **repeat** path, which is the one that happens often enough to be worth a checklist.

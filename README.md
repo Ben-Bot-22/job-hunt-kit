@@ -40,7 +40,8 @@ This is built for a full-stack developer search, but it can be used for anything
 
 ## What it does
 
-Four things. Each is a separate command, and none of them needs the others.
+Four commands, each standalone and none of them needing the others — plus the parts that need a
+coding agent, below.
 
 ### 1 · Daily triage → a ranked worklist
 
@@ -103,6 +104,13 @@ with the JD and a record of which bullets it chose and why.
 It can only use bullets from your **bullet bank** — the things you have actually done, written down
 once. That is the mechanical reason it cannot invent experience for you.
 
+**A second model grades the result.** It reads the rendered PDF alongside the job's brief and scores it
+the way a screener would, flagging bullets that are vague or written in marketing register. Its findings
+feed a fix loop that is capped at two passes.
+
+**It grades, but it never rewrites.** Fixes may only re-select from bullets already in your bank, because
+a grader that edits its own claims is how a false claim reaches an employer.
+
 **This is the only feature that needs a coding agent.** `/tailor-cv` reads the JD, proposes changes,
 waits for your approval, then renders.
 
@@ -114,6 +122,29 @@ hiring for, and have you dealt with them before.
 ```bash
 python -m research "TEKsystems"
 ```
+
+### 5 · With a coding agent — the parts that are a conversation
+
+Two things here are not commands, because the work is judgement rather than mechanism.
+
+- **`/evaluate-role`** works through a single job in depth: what it actually is, what the interview will
+  demand, and what the trade is. Triage ranks the firehose; this provides more information for a decision.
+- **`/cover-letter`** writes a letter, a recruiter reply or a form answer in your own voice, using a voice
+  file you tune rather than a template.
+
+### Experimental: `/apply-form`
+
+The problem is that companies force you to upload your resume but their autofill is garbage most of the
+time, which means manual work that you have to do over and over (full time roles). This helps fill in the
+blanks from the resume, but it is slow and error prone because it uses Claude in the browser, which is
+experimental.
+
+**WARNING:** Claude got my Apple developer account terminated (with no appeal process). I got it back but
+it caused much stress and it took two weeks. I notified Anthropic about this issue and there was no
+response, no support and no public warning. You can read about it on
+[my blog](https://www.reazy.pro/blog/150000-apple-developers-terminated-2-8-reinstated-heres-how-i-beat-the-odds).
+Basically, companies have incentives to stop fraud (and browser automation looks like fraud), so be
+careful where you use it.
 
 ## Quick start
 
@@ -246,10 +277,10 @@ The vendor is a config value, not a code change. One module builds every model c
 
 ## Which agent runs the workflows
 
-Five workflows ship as [Agent Skills](https://agentskills.dev) — markdown under `.claude/skills/`,
+Nine workflows ship as [Agent Skills](https://agentskills.dev) — markdown under `.claude/skills/`,
 an open format many clients read. This is how I use it: I open the repo in Claude Code and let it drive.
 
-**They are meant to be edited.** The Python is general; these five files are not — they were written as
+**They are meant to be edited.** The Python is general; these nine files are not — they were written as
 one person's runbook and still read that way: a named user, a Gmail label, a Google Sheet, a Mac. They
 are the most fork-shaped thing in the repo — prose, no schema, nothing parses them, and changing one
 cannot break the pipeline underneath. Rewriting the second person out of them and putting your own rules
@@ -259,9 +290,13 @@ in is not a modification of the tool; it is how the tool is used. Read the skill
 | skill | what it does |
 |---|---|
 | `/setup` | reads your résumé into a bullet bank, asks about what it can't back, writes your profile and rubric |
-| `/job-triage` | runs the pipeline end to end, then tailors résumés for the top picks |
+| `/job-triage` | runs the pipeline end to end, then researches, tailors and drafts for the top picks |
 | `/research-company` | pre-apply research on a company, a URL, or a run's top picks |
+| `/evaluate-role` | works through one job in depth and records the decision |
 | `/tailor-cv` | builds the JD-tailored résumé, with an approval gate |
+| `/tailor-cv-batch` | builds several at once, one agent per job, for a whole run's picks |
+| `/cover-letter` | a letter, reply or form answer in your own voice |
+| `/apply-form` | experimental — drives an application in your own browser (read the warning above) |
 | `/sync-applied` | syncs your applied-jobs sheet so applied roles never resurface |
 
 Tiered by what has actually been run: **Claude Code** is tested — every workflow here was built and
